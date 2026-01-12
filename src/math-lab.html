@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Lab | Module</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        .fixed-input {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            color: #60a5fa !important;
+            border-radius: 0.5rem;
+            width: 3.5rem;
+            padding: 0.25rem;
+            text-align: center;
+            font-weight: 700;
+            outline: none;
+        }
+        .fixed-input:focus { border-color: #3b82f6 !important; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .correct-flash { background-color: #064e3b !important; transition: 0.1s; }
+        .invisible-num { opacity: 0; transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .progress-bar { transition: width 0.3s linear; }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+
+<body class="bg-[#020617] text-slate-200 min-h-screen p-4 lg:p-10 selection:bg-blue-500/30">
+
+    <div id="auth-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#020617] text-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <h2 class="text-xl font-bold tracking-widest uppercase">Syncing Data...</h2>
+        <p id="auth-error" class="text-red-500 text-xs mt-4 hidden">Authentication failed.</p>
+    </div>
+
+    <div id="app" class="max-w-7xl mx-auto animate-in zoom-in duration-300 hidden">
+
+        <div class="mb-6 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Back to Hub
+            </a>
+            <div class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Module: Math Lab</div>
+        </div>
+
+        <div id="home-view" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/40">
+                            <span class="text-2xl font-black text-white">×</span>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-white tracking-tight">MATH LAB</h1>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Bot Race V1.3</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="bg-slate-900/40 p-5 rounded-2xl border border-white/5 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="check-add" onchange="saveConfig()" class="w-5 h-5 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0">
+                                    <span class="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-400">Addition</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="check-sub" onchange="saveConfig()" class="w-5 h-5 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0">
+                                    <span class="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-400">Subtraction</span>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-center gap-3 text-xs text-slate-500 font-bold">
+                                <input type="number" id="add-min1" onchange="saveConfig()" class="fixed-input"> to
+                                <input type="number" id="add-max1" onchange="saveConfig()" class="fixed-input">
+                                <span class="text-lg text-slate-700 mx-1">+</span>
+                                <input type="number" id="add-min2" onchange="saveConfig()" class="fixed-input"> to
+                                <input type="number" id="add-max2" onchange="saveConfig()" class="fixed-input">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/40 p-5 rounded-2xl border border-white/5 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="check-mul" onchange="saveConfig()" class="w-5 h-5 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0">
+                                    <span class="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-400">Multiplication</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="checkbox" id="check-div" onchange="saveConfig()" class="w-5 h-5 rounded border-slate-700 bg-slate-800 text-blue-500 focus:ring-0">
+                                    <span class="text-xs font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-400">Division</span>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-center gap-3 text-xs text-slate-500 font-bold">
+                                <input type="number" id="mul-min1" onchange="saveConfig()" class="fixed-input"> to
+                                <input type="number" id="mul-max1" onchange="saveConfig()" class="fixed-input">
+                                <span class="text-lg text-slate-700 mx-1">×</span>
+                                <input type="number" id="mul-min2" onchange="saveConfig()" class="fixed-input"> to
+                                <input type="number" id="mul-max2" onchange="saveConfig()" class="fixed-input">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/40 p-5 rounded-2xl border border-white/5 space-y-4">
+                            <div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Session Time</span>
+                                    <span id="duration-val" class="mono text-blue-500 font-bold">60s</span>
+                                </div>
+                                <input type="range" id="duration-slider" min="10" max="300" step="10" value="60" oninput="updateUI()" class="w-full accent-blue-600 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none">
+                            </div>
+                            <div id="bot-speed-container" class="opacity-50 transition-opacity">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Bot Speed</span>
+                                    <span id="bot-speed-val" class="mono text-red-500 font-bold">3.0s</span>
+                                </div>
+                                <input type="range" id="bot-speed-slider" min="0.5" max="5.0" step="0.5" value="3.0" oninput="updateUI()" class="w-full accent-red-600 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="flex items-center justify-between bg-slate-900/40 p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-slate-800/60 transition-all">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Bot Race</span>
+                                <input type="checkbox" id="bot-toggle" onchange="saveConfig(); updateUI()" class="w-5 h-5 accent-red-500 bg-slate-800 border-slate-700 rounded">
+                            </label>
+                            <label class="flex items-center justify-between bg-slate-900/40 p-4 rounded-2xl border border-white/5 cursor-pointer hover:bg-slate-800/60 transition-all">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Invisible</span>
+                                <input type="checkbox" id="invisible-toggle" onchange="saveConfig()" class="w-5 h-5 accent-purple-500 bg-slate-800 border-slate-700 rounded">
+                            </label>
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full mt-8 bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-2xl font-black text-lg transition-all active:scale-[0.97] shadow-2xl shadow-blue-900/20">
+                        START SESSION
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-3xl">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Personal Best</span>
+                        <div id="pb-display" class="text-4xl font-black text-white italic">0</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Avg Speed</span>
+                        <div class="flex items-baseline gap-2">
+                            <div id="speed-display" class="text-4xl font-black text-white italic">0</div>
+                            <span class="text-slate-600 font-bold text-sm">s / eq</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">History (Cloud)</h2>
+                        <div class="text-[10px] text-green-500 font-bold uppercase flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> Live Sync
+                        </div>
+                    </div>
+                    <div class="relative h-[300px] w-full">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-view" class="hidden max-w-4xl mx-auto pt-4">
+            <div class="relative glass-card p-12 lg:p-16 rounded-[4rem] text-center shadow-2xl overflow-hidden border border-slate-700/50">
+                <div id="race-ui" class="hidden absolute top-0 left-0 w-full bg-slate-900 border-b border-white/5 p-4">
+                    <div class="flex flex-col gap-2 max-w-lg mx-auto">
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-bold text-blue-500 w-8">YOU</span>
+                            <div class="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="user-bar" class="h-full bg-blue-500 progress-bar shadow-[0_0_10px_rgba(59,130,246,0.6)]" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-[10px] font-bold text-red-500 w-8">BOT</span>
+                            <div class="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden">
+                                <div id="bot-bar" class="h-full bg-red-500 progress-bar shadow-[0_0_10px_rgba(239,68,68,0.6)]" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-12 mb-6 px-4">
+                    <div class="text-left"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Clock</span><span id="timer" class="text-5xl mono font-black text-white">60</span></div>
+                    <div class="text-right"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Score</span><span id="score-val" class="text-5xl mono font-black text-blue-500">0</span></div>
+                </div>
+                <div id="equation" class="text-[8rem] lg:text-[10rem] font-black tracking-tighter mb-10 pt-10 tabular-nums text-white leading-none">---</div>
+                <input type="number" id="answer-input" placeholder="?" class="bg-transparent text-8xl text-center w-full outline-none text-blue-500 mono placeholder-slate-900" autocomplete="off">
+            </div>
+        </div>
+
+        <div id="detail-view" class="hidden max-w-3xl mx-auto pt-4">
+            <div class="glass-card p-10 rounded-[3rem] shadow-2xl border-t-4 border-t-blue-600">
+                <div class="flex justify-between items-center mb-10">
+                    <div>
+                        <h2 class="text-3xl font-black text-white">Session Complete</h2>
+                        <p id="race-result-text" class="text-slate-500 text-xs font-bold uppercase tracking-[0.2em] mt-2"></p>
+                    </div>
+                    <button onclick="closeDetails()" class="bg-slate-800 text-white px-8 py-3 rounded-2xl font-bold hover:bg-slate-700 transition">DASHBOARD</button>
+                </div>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-black/40 p-6 rounded-3xl text-center border border-white/5"><span class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Score</span><span id="detail-score" class="text-4xl font-black text-blue-500 italic">0</span></div>
+                    <div class="bg-black/40 p-6 rounded-3xl text-center border border-white/5"><span class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Bot Score</span><span id="detail-bot-score" class="text-4xl font-black text-red-500 italic">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIG & AUTH ---
+        const SUPABASE_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        let supabaseClient;
+        let currentUser = null;
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (err) {
+            console.error("Supabase failed:", err);
+            document.getElementById('auth-error').innerText = "System Error: " + err.message;
+            document.getElementById('auth-error').classList.remove('hidden');
+        }
+
+        // --- 2. STARTUP LOGIC ---
+        async function initApp() {
+            if(!supabaseClient) return;
+            try {
+                // Check Login
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                if (!session) {
+                    window.location.href = "../index.html"; 
+                } else {
+                    currentUser = session.user;
+                    // Load Config
+                    const savedConfig = JSON.parse(localStorage.getItem('math_config_bot_v2'));
+                    if (savedConfig) config = savedConfig;
+                    syncUI();
+                    
+                    // FETCH HISTORY FROM CLOUD (Fix for syncing)
+                    await loadCloudHistory();
+                    
+                    // Show App
+                    document.getElementById('auth-loading').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Init failed:", err);
+            }
+        }
+
+        // --- 3. GAME STATE ---
+        let config = {
+            add: { active: true, min1: 2, max1: 100, min2: 2, max2: 100 },
+            sub: { active: true },
+            mul: { active: true, min1: 2, max1: 12, min2: 2, max2: 100 },
+            div: { active: true },
+            duration: 60, botRace: false, botSpeed: 3.0, invisible: false
+        };
+        let game = { score: 0, botScore: 0, timeLeft: 60, currentAns: null, history: [], sessionLogs: [], pb: 0 };
+        let chart;
+        let botInterval;
+
+        // --- 4. CLOUD SYNC FUNCTIONS ---
+        async function loadCloudHistory() {
+            if(!currentUser) return;
+            
+            // Fetch past scores from Supabase
+            const { data, error } = await supabaseClient
+                .from('game_scores')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('game_type', 'math-lab')
+                .order('played_at', { ascending: true }); // Oldest first for chart
+
+            if (error) {
+                console.error("Error fetching history:", error);
+                return;
+            }
+
+            // Convert DB format to App format
+            game.sessionLogs = data.map(row => ({
+                score: row.score,
+                speed: row.speed,
+                date: new Date(row.played_at).toLocaleDateString()
+            }));
+
+            updateAnalyticsUI();
+        }
+
+        async function saveScoreToCloud(score, speed) {
+            if(!currentUser) return;
+            
+            const { error } = await supabaseClient.from('game_scores').insert({
+                user_id: currentUser.id,
+                game_type: 'math-lab',
+                score: score,
+                speed: speed,
+                played_at: new Date().toISOString()
+            });
+
+            if(error) console.error("Cloud Save Failed:", error.message);
+        }
+
+        // --- 5. UI & CONFIG ---
+        function updateUI() {
+            document.getElementById('duration-val').innerText = document.getElementById('duration-slider').value + 's';
+            document.getElementById('bot-speed-val').innerText = document.getElementById('bot-speed-slider').value + 's';
+            const isBotOn = document.getElementById('bot-toggle').checked;
+            const botContainer = document.getElementById('bot-speed-container');
+            isBotOn ? botContainer.classList.remove('opacity-50', 'pointer-events-none') : botContainer.classList.add('opacity-50', 'pointer-events-none');
+            saveConfig();
+        }
+
+        function saveConfig() {
+            config.add.active = document.getElementById('check-add').checked;
+            config.add.min1 = parseInt(document.getElementById('add-min1').value) || 2;
+            config.add.max1 = parseInt(document.getElementById('add-max1').value) || 100;
+            config.add.min2 = parseInt(document.getElementById('add-min2').value) || 2;
+            config.add.max2 = parseInt(document.getElementById('add-max2').value) || 100;
+            config.sub.active = document.getElementById('check-sub').checked;
+            config.mul.active = document.getElementById('check-mul').checked;
+            config.mul.min1 = parseInt(document.getElementById('mul-min1').value) || 2;
+            config.mul.max1 = parseInt(document.getElementById('mul-max1').value) || 12;
+            config.mul.min2 = parseInt(document.getElementById('mul-min2').value) || 2;
+            config.mul.max2 = parseInt(document.getElementById('mul-max2').value) || 100;
+            config.div.active = document.getElementById('check-div').checked;
+            config.duration = parseInt(document.getElementById('duration-slider').value);
+            config.botSpeed = parseFloat(document.getElementById('bot-speed-slider').value);
+            config.botRace = document.getElementById('bot-toggle').checked;
+            config.invisible = document.getElementById('invisible-toggle').checked;
+            localStorage.setItem('math_config_bot_v2', JSON.stringify(config));
+        }
+
+        function syncUI() {
+            document.getElementById('check-add').checked = config.add.active;
+            document.getElementById('add-min1').value = config.add.min1;
+            document.getElementById('add-max1').value = config.add.max1;
+            document.getElementById('add-min2').value = config.add.min2;
+            document.getElementById('add-max2').value = config.add.max2;
+            document.getElementById('check-sub').checked = config.sub.active;
+            document.getElementById('check-mul').checked = config.mul.active;
+            document.getElementById('mul-min1').value = config.mul.min1;
+            document.getElementById('mul-max1').value = config.mul.max1;
+            document.getElementById('mul-min2').value = config.mul.min2;
+            document.getElementById('mul-max2').value = config.mul.max2;
+            document.getElementById('check-div').checked = config.div.active;
+            document.getElementById('duration-slider').value = config.duration;
+            document.getElementById('bot-speed-slider').value = config.botSpeed;
+            document.getElementById('bot-toggle').checked = config.botRace;
+            document.getElementById('invisible-toggle').checked = config.invisible;
+            updateUI();
+        }
+
+        // --- 6. GAME ENGINE ---
+        function startGame() {
+            const activeOps = [];
+            if (config.add.active) activeOps.push('add');
+            if (config.sub.active) activeOps.push('sub');
+            if (config.mul.active) activeOps.push('mul');
+            if (config.div.active) activeOps.push('div');
+            if (activeOps.length === 0) return alert("Select an operation!");
+
+            game.score = 0; game.botScore = 0; game.timeLeft = config.duration; game.history = [];
+            game.pb = game.sessionLogs.length > 0 ? Math.max(...game.sessionLogs.map(s => s.score)) : 0;
+
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('detail-view').classList.add('hidden');
+            document.getElementById('game-view').classList.remove('hidden');
+
+            if (config.botRace) {
+                document.getElementById('race-ui').classList.remove('hidden');
+                document.getElementById('user-bar').style.width = '0%';
+                document.getElementById('bot-bar').style.width = '0%';
+                startBot();
+            } else {
+                document.getElementById('race-ui').classList.add('hidden');
+            }
+
+            nextProblem(activeOps);
+            startTimer(activeOps);
+            document.getElementById('answer-input').focus();
+        }
+
+        function startBot() {
+            botInterval = setInterval(() => { game.botScore++; updateRaceUI(); }, config.botSpeed * 1000);
+        }
+
+        function updateRaceUI() {
+            const maxProjected = config.duration / 1.5;
+            document.getElementById('user-bar').style.width = Math.min((game.score / maxProjected) * 100, 100) + '%';
+            document.getElementById('bot-bar').style.width = Math.min((game.botScore / maxProjected) * 100, 100) + '%';
+        }
+
+        function nextProblem(activeOps) {
+            const opType = activeOps[Math.floor(Math.random() * activeOps.length)];
+            let a, b, eq, ans;
+            if (opType === 'add' || opType === 'sub') {
+                a = Math.floor(Math.random() * (config.add.max1 - config.add.min1 + 1)) + config.add.min1;
+                b = Math.floor(Math.random() * (config.add.max2 - config.add.min2 + 1)) + config.add.min2;
+                if (opType === 'add') { eq = `${a} + ${b}`; ans = a + b; }
+                else { eq = `${a + b} - ${a}`; ans = b; }
+            } else {
+                a = Math.floor(Math.random() * (config.mul.max1 - config.mul.min1 + 1)) + config.mul.min1;
+                b = Math.floor(Math.random() * (config.mul.max2 - config.mul.min2 + 1)) + config.mul.min2;
+                if (opType === 'mul') { eq = `${a} × ${b}`; ans = a * b; }
+                else { eq = `${a * b} ÷ ${a}`; ans = b; }
+            }
+            game.currentAns = ans;
+            const eqEl = document.getElementById('equation');
+            eqEl.innerText = eq;
+            eqEl.classList.remove('invisible-num');
+            if (config.invisible) setTimeout(() => eqEl.classList.add('invisible-num'), 1000);
+            game.start = Date.now();
+            document.getElementById('answer-input').value = '';
+        }
+
+        document.getElementById('answer-input').oninput = function () {
+            if (parseInt(this.value) === game.currentAns) {
+                const t = (Date.now() - game.start) / 1000;
+                game.history.push({ eq: document.getElementById('equation').innerText, a: game.currentAns, t });
+                game.score++;
+                document.getElementById('score-val').innerText = game.score;
+                if (config.botRace) updateRaceUI();
+                const card = document.getElementById('game-view').firstElementChild;
+                card.classList.add('correct-flash'); setTimeout(() => card.classList.remove('correct-flash'), 100);
+
+                const activeOps = [];
+                if (config.add.active) activeOps.push('add');
+                if (config.sub.active) activeOps.push('sub');
+                if (config.mul.active) activeOps.push('mul');
+                if (config.div.active) activeOps.push('div');
+                nextProblem(activeOps);
+            }
+        };
+
+        function startTimer(activeOps) {
+            let timer = setInterval(() => {
+                game.timeLeft--;
+                document.getElementById('timer').innerText = game.timeLeft;
+                if (game.timeLeft <= 0) { clearInterval(timer); clearInterval(botInterval); endGame(); }
+            }, 1000);
+        }
+
+        function endGame() {
+            const avg = game.history.length ? (game.history.reduce((acc, c) => acc + c.t, 0) / game.history.length).toFixed(2) : 0;
+            const session = {
+                score: game.score, speed: parseFloat(avg), date: new Date().toLocaleDateString()
+            };
+            
+            // Save to Cloud
+            saveScoreToCloud(game.score, parseFloat(avg));
+            
+            // Add to local logs for immediate display
+            game.sessionLogs.push(session);
+
+            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('detail-view').classList.remove('hidden');
+
+            document.getElementById('detail-score').innerText = game.score;
+            document.getElementById('detail-bot-score').innerText = config.botRace ? game.botScore : "N/A";
+
+            let resultText = "Session Complete";
+            if (config.botRace) {
+                if (game.score > game.botScore) resultText = "🏆 You beat the bot!";
+                else if (game.score < game.botScore) resultText = "💀 The bot won...";
+                else resultText = "🤝 It's a draw!";
+            }
+            document.getElementById('race-result-text').innerText = resultText;
+            updateAnalyticsUI();
+        }
+
+        function updateAnalyticsUI() {
+            const logs = game.sessionLogs;
+            document.getElementById('pb-display').innerText = logs.length ? Math.max(...logs.map(s => s.score)) : 0;
+            const avgSpeed = logs.length ? (logs.reduce((a, b) => a + b.speed, 0) / logs.length).toFixed(2) : 0;
+            document.getElementById('speed-display').innerText = avgSpeed;
+            renderChart();
+        }
+
+        function closeDetails() {
+            location.reload();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (chart) chart.destroy();
+            
+            // Show last 20 games
+            const data = game.sessionLogs.slice(-20);
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(s => s.date),
+                    datasets: [
+                        { label: 'Score', data: data.map(s => s.score), borderColor: '#3b82f6', tension: 0.4, yAxisID: 'y', pointRadius: 4, pointHoverRadius: 6, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.2)' },
+                        { label: 'Speed (s)', data: data.map(s => s.speed), borderColor: '#a855f7', borderDash: [5, 5], tension: 0.4, yAxisID: 'y1', pointRadius: 4, pointHoverRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { display: false },
+                        y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#3b82f6' } },
+                        y1: { position: 'right', grid: { display: false }, ticks: { color: '#a855f7' }, reverse: true }
+                    }
+                }
+            });
+        }
+
+        function clearStats() { if (confirm('Clear history?')) { localStorage.clear(); location.reload(); } }
+
+        // Start App Logic
+        initApp();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

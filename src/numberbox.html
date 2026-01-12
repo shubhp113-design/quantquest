@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Number Box</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Number Cards */
+        .num-card { 
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; font-weight: 800; border-radius: 1.5rem;
+            background: rgba(30, 41, 59, 0.6); border: 2px solid rgba(255,255,255,0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); user-select: none; cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .num-card:hover { transform: translateY(-4px); border-color: rgba(20, 184, 166, 0.5); background: rgba(30, 41, 59, 0.8); }
+        .num-card:active { transform: scale(0.95); }
+        
+        /* State Styles */
+        .num-card.selected { 
+            background: #0d9488; border-color: #2dd4bf; color: white; 
+            transform: scale(1.05); box-shadow: 0 0 20px rgba(20, 184, 166, 0.4); 
+        }
+        .num-card.pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        /* Operators */
+        .op-btn {
+            width: 4rem; height: 4rem; border-radius: 1rem; font-size: 1.5rem; font-weight: 900;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.1s; color: #94a3b8;
+        }
+        .op-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+        .op-btn.selected { background: #f59e0b; color: white; border-color: #fbbf24; transform: scale(1.1); }
+
+        /* Animations */
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        /* Toggle Buttons */
+        .toggle-btn { transition: all 0.2s; border: 1px solid transparent; }
+        .toggle-btn.active { background-color: #0d9488; color: white; border-color: #2dd4bf; box-shadow: 0 0 10px rgba(20, 184, 166, 0.3); }
+        .toggle-btn.inactive { background-color: rgba(30, 41, 59, 0.5); color: #64748b; border-color: rgba(255,255,255,0.05); }
+        .toggle-btn.inactive:hover { background-color: rgba(30, 41, 59, 0.8); color: #94a3b8; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-teal-500/30 p-4 lg:p-10 flex flex-col">
+
+    <div id="app" class="max-w-7xl mx-auto w-full animate-in fade-in duration-500 flex-1 flex flex-col">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            
+            <div class="flex items-center gap-8">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time</div>
+                    <div class="text-xl font-black text-white mono" id="timer-display">00:00</div>
+                </div>
+                
+                <div class="h-8 w-px bg-white/10"></div>
+
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-teal-500 uppercase tracking-widest">Solved</div>
+                    <div class="text-xl font-black text-teal-500 mono" id="score-display">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+            
+            <div class="lg:col-span-4 space-y-6">
+                
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-6 opacity-5">
+                        <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/></svg>
+                    </div>
+
+                    <h2 class="text-xl font-extrabold text-white tracking-tight mb-6">GAME SETUP</h2>
+
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                <span>Target Number</span>
+                                <span id="label-target" class="text-teal-400">Fixed (24)</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="setMode('fixed')" id="btn-mode-fixed" class="toggle-btn active flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest">24</button>
+                                <button onclick="setMode('random')" id="btn-mode-random" class="toggle-btn inactive flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest">Random</button>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-slate-800/50 rounded-xl border border-white/5">
+                            <h3 class="text-[10px] font-bold text-slate-500 uppercase mb-2">How to Play</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Combine <strong>all 4 numbers</strong> to reach the target.<br>
+                                Click number → Select Operator → Click next number.
+                            </p>
+                        </div>
+
+                        <button onclick="startGame()" id="btn-start" class="w-full bg-teal-600 hover:bg-teal-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-teal-900/20 transition-all active:scale-95">
+                            Start Session
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Solve Pace</h3>
+                    </div>
+                    <div class="h-32 w-full">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col">
+                <div id="game-stage" class="glass-card flex-1 rounded-[3rem] p-8 flex flex-col items-center justify-center border border-slate-700/50 transition-colors duration-200 relative">
+                    
+                    <div class="absolute top-8 text-center">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2">Target</div>
+                        <div class="text-6xl font-black text-white mono drop-shadow-[0_0_15px_rgba(20,184,166,0.3)]" id="target-val">24</div>
+                    </div>
+
+                    <div class="flex-1 flex items-center justify-center w-full max-w-2xl mt-16">
+                        <div id="cards-container" class="grid grid-cols-2 md:grid-cols-4 gap-6 w-full">
+                            <div class="col-span-4 text-center text-slate-500 font-mono text-sm animate-pulse">Press Start to Begin</div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 mt-12 mb-4">
+                        <button onclick="selectOp('+')" id="op-add" class="op-btn">+</button>
+                        <button onclick="selectOp('-')" id="op-sub" class="op-btn">−</button>
+                        <button onclick="selectOp('*')" id="op-mul" class="op-btn">×</button>
+                        <button onclick="selectOp('/')" id="op-div" class="op-btn">÷</button>
+                    </div>
+
+                    <div class="flex gap-4 mt-6">
+                        <button onclick="undoMove()" class="text-xs font-bold text-slate-500 hover:text-white uppercase tracking-widest px-4 py-2 bg-slate-800 rounded-lg border border-transparent hover:border-slate-600 transition-all">Undo</button>
+                        <button onclick="skipLevel()" class="text-xs font-bold text-slate-500 hover:text-red-400 uppercase tracking-widest px-4 py-2 bg-slate-800 rounded-lg border border-transparent hover:border-red-900 transition-all">Skip & Show Answer</button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+        <div class="bg-slate-900 border border-white/10 p-8 rounded-[2rem] shadow-2xl text-center transform scale-95 transition-transform duration-300 max-w-md w-full" id="modal-content">
+            <div id="modal-glow" class="absolute top-0 left-0 w-full h-2 bg-teal-500 shadow-[0_0_40px_rgba(20,184,166,0.5)]"></div>
+            
+            <div id="modal-icon" class="text-5xl mb-4">✨</div>
+            <h2 id="modal-title" class="text-2xl font-black text-white mb-2 uppercase tracking-wide">Solved!</h2>
+            
+            <div class="bg-slate-800/50 rounded-xl p-4 mb-6 border border-white/5">
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Solution</div>
+                <div id="modal-solution" class="text-xl font-mono font-bold text-teal-400 break-words">
+                    (8 - 2) * (2 + 2)
+                </div>
+            </div>
+
+            <button onclick="nextLevel()" id="modal-btn" class="w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-teal-900/20 transition-all">Next Card</button>
+        </div>
+    </div>
+
+    <script>
+        // --- STATE ---
+        let config = { target: 24, randomTarget: false };
+        let session = { active: false, score: 0, startTime: 0, timerInt: null };
+        let gameState = { 
+            initialNumbers: [], 
+            currentNumbers: [], 
+            history: [], 
+            selectedIdx: -1, 
+            selectedOp: null,
+            solutionStr: "" 
+        };
+        let chart;
+
+        // --- INIT ---
+        window.onload = () => {
+            initChart();
+        };
+
+        function setMode(mode) {
+            config.randomTarget = (mode === 'random');
+            
+            const btnFixed = document.getElementById('btn-mode-fixed');
+            const btnRandom = document.getElementById('btn-mode-random');
+            const label = document.getElementById('label-target');
+
+            if (mode === 'fixed') {
+                btnFixed.className = "toggle-btn active flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest";
+                btnRandom.className = "toggle-btn inactive flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest";
+                label.innerText = "Fixed (24)";
+            } else {
+                btnFixed.className = "toggle-btn inactive flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest";
+                btnRandom.className = "toggle-btn active flex-1 py-3 rounded-xl font-bold text-xs uppercase tracking-widest";
+                label.innerText = "Random (10-99)";
+            }
+        }
+
+        // --- GAME LOGIC ---
+        function startGame() {
+            session = { active: true, score: 0, startTime: Date.now(), timerInt: null };
+            document.getElementById('score-display').innerText = "0";
+            document.getElementById('timer-display').innerText = "00:00";
+            document.getElementById('btn-start').innerText = "Restart Session";
+            
+            resetChart();
+            
+            // Timer
+            if(session.timerInt) clearInterval(session.timerInt);
+            session.timerInt = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - session.startTime) / 1000);
+                const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const s = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${m}:${s}`;
+            }, 1000);
+
+            nextLevel();
+        }
+
+        function nextLevel() {
+            closeModal();
+            // Generate Solvable Puzzle
+            const target = config.randomTarget ? Math.floor(Math.random() * 89) + 10 : 24;
+            const puzzleData = generateSolvable(target);
+            
+            gameState = {
+                initialNumbers: puzzleData.nums.map(n => ({ val: n, id: Math.random() })),
+                currentNumbers: puzzleData.nums.map(n => ({ val: n, id: Math.random() })), 
+                history: [],
+                selectedIdx: -1,
+                selectedOp: null,
+                target: target,
+                solutionStr: puzzleData.solution // Store string from solver
+            };
+
+            document.getElementById('target-val').innerText = target;
+            renderCards();
+            resetSelection();
+        }
+
+        function generateSolvable(target) {
+            let attempt = 0;
+            // Generate 4 random numbers (1-13) until a solvable set is found
+            while(attempt < 2000) {
+                let nums = Array.from({length: 4}, () => Math.floor(Math.random() * 13) + 1);
+                // We need to convert plain numbers to objects for the solver to track expression strings
+                let numObjs = nums.map(n => ({ val: n, expr: n.toString() }));
+                
+                let solution = solveExpression(numObjs, target);
+                if (solution) {
+                    return { nums: nums, solution: solution };
+                }
+                attempt++;
+            }
+            // Fallback for safety
+            return { nums: [12, 8, 2, 2], solution: "(12 - 8) * (2 + 4)" }; 
+        }
+
+        // Recursive Solver that returns the expression string
+        function solveExpression(list, target) {
+            if (list.length === 1) {
+                if (Math.abs(list[0].val - target) < 0.001) return list[0].expr;
+                return null;
+            }
+
+            for (let i = 0; i < list.length; i++) {
+                for (let j = 0; j < list.length; j++) {
+                    if (i === j) continue;
+                    
+                    let remaining = list.filter((_, k) => k !== i && k !== j);
+                    let a = list[i];
+                    let b = list[j];
+
+                    // Try all operations
+                    let candidates = [
+                        { val: a.val + b.val, expr: `(${a.expr} + ${b.expr})` },
+                        { val: a.val - b.val, expr: `(${a.expr} - ${b.expr})` },
+                        { val: a.val * b.val, expr: `(${a.expr} * ${b.expr})` }
+                    ];
+                    if (b.val !== 0) candidates.push({ val: a.val / b.val, expr: `(${a.expr} / ${b.expr})` });
+                    
+                    // Division usually order matters, subtract order matters. 
+                    // Note: a-b is covered. b-a requires swapping logic or just iterating carefully. 
+                    // The nested loop picks every pair (i, j), so (j, i) will eventually be picked 
+                    // covering b-a and b/a naturally.
+
+                    for (let item of candidates) {
+                        let res = solveExpression([...remaining, item], target);
+                        if (res) return res;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // --- INTERACTION ---
+        function renderCards() {
+            const container = document.getElementById('cards-container');
+            container.innerHTML = gameState.currentNumbers.map((n, idx) => `
+                <div onclick="clickCard(${idx})" 
+                     class="num-card ${gameState.selectedIdx === idx ? 'selected' : ''} pop-in">
+                    ${formatNum(n.val)}
+                </div>
+            `).join('');
+        }
+
+        function formatNum(n) {
+            return Number.isInteger(n) ? n : n.toFixed(1).replace('.0', '');
+        }
+
+        function clickCard(idx) {
+            if (!session.active) return;
+
+            if (gameState.selectedIdx === -1) {
+                gameState.selectedIdx = idx;
+                renderCards();
+                return;
+            }
+
+            if (gameState.selectedIdx === idx) {
+                resetSelection();
+                return;
+            }
+
+            if (gameState.selectedOp) {
+                performOp(gameState.selectedIdx, idx);
+            } else {
+                gameState.selectedIdx = idx;
+                renderCards();
+            }
+        }
+
+        function selectOp(op) {
+            if (!session.active || gameState.selectedIdx === -1) return;
+            gameState.selectedOp = op;
+            document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('selected'));
+            const map = {'+':'add', '-':'sub', '*':'mul', '/':'div'};
+            document.getElementById(`op-${map[op]}`).classList.add('selected');
+        }
+
+        function performOp(idx1, idx2) {
+            const n1 = gameState.currentNumbers[idx1].val;
+            const n2 = gameState.currentNumbers[idx2].val;
+            let res = 0;
+
+            switch(gameState.selectedOp) {
+                case '+': res = n1 + n2; break;
+                case '-': res = n1 - n2; break;
+                case '*': res = n1 * n2; break;
+                case '/': 
+                    if(Math.abs(n2) < 0.0001) { alert("Cannot divide by zero"); resetSelection(); return; }
+                    res = n1 / n2; 
+                    break;
+            }
+
+            gameState.history.push(JSON.parse(JSON.stringify(gameState.currentNumbers)));
+
+            const newArr = gameState.currentNumbers.filter((_, i) => i !== idx1 && i !== idx2);
+            newArr.push({ val: res, id: Date.now() }); 
+            
+            gameState.currentNumbers = newArr;
+            resetSelection();
+            renderCards();
+            checkWin();
+        }
+
+        function checkWin() {
+            if (gameState.currentNumbers.length === 1) {
+                const final = gameState.currentNumbers[0].val;
+                if (Math.abs(final - gameState.target) < 0.001) {
+                    session.score++;
+                    document.getElementById('score-display').innerText = session.score;
+                    updateChart();
+                    showModal('success');
+                }
+            }
+        }
+
+        function undoMove() {
+            if (gameState.history.length > 0) {
+                gameState.currentNumbers = gameState.history.pop();
+                resetSelection();
+                renderCards();
+            }
+        }
+
+        function skipLevel() {
+            showModal('skip');
+        }
+
+        function resetSelection() {
+            gameState.selectedIdx = -1;
+            gameState.selectedOp = null;
+            document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('selected'));
+            renderCards();
+        }
+
+        // --- MODAL ---
+        function showModal(type) {
+            const modal = document.getElementById('result-modal');
+            const content = document.getElementById('modal-content');
+            const glow = document.getElementById('modal-glow');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const solutionText = document.getElementById('modal-solution');
+            const btn = document.getElementById('modal-btn');
+
+            // Set content based on type
+            solutionText.innerText = gameState.solutionStr || "Generating...";
+
+            if (type === 'success') {
+                glow.className = "absolute top-0 left-0 w-full h-2 bg-teal-500 shadow-[0_0_40px_rgba(20,184,166,0.6)]";
+                icon.innerText = "✨";
+                title.innerText = "Solved!";
+                title.className = "text-2xl font-black text-white mb-2 uppercase tracking-wide";
+                btn.className = "w-full bg-teal-600 hover:bg-teal-500 text-white font-bold py-3 px-8 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-teal-900/20 transition-all";
+                btn.innerText = "Next Puzzle";
+            } else {
+                glow.className = "absolute top-0 left-0 w-full h-2 bg-orange-500 shadow-[0_0_40px_rgba(249,115,22,0.6)]";
+                icon.innerText = "⏩";
+                title.innerText = "Skipped";
+                title.className = "text-2xl font-black text-orange-400 mb-2 uppercase tracking-wide";
+                btn.className = "w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-xl uppercase tracking-widest text-xs transition-all";
+                btn.innerText = "Next Puzzle";
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('result-modal');
+            const content = document.getElementById('modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // --- CHART ---
+        function initChart() {
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Solves',
+                        data: [],
+                        borderColor: '#14b8a6',
+                        backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: true, beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        function resetChart() {
+            if(!chart) return;
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.update();
+        }
+
+        function updateChart() {
+            if(!chart) return;
+            chart.data.labels.push('');
+            chart.data.datasets[0].data.push(session.score);
+            chart.update();
+        }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

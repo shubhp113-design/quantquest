@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Shape Shift</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Shape Animations */
+        .shape-transition { transition: all 0.1s; }
+        
+        /* Flash Effects */
+        @keyframes flash-green { 0% { background-color: rgba(34, 197, 94, 0.2); } 100% { background-color: transparent; } }
+        @keyframes flash-red { 0% { background-color: rgba(239, 68, 68, 0.2); } 100% { background-color: transparent; } }
+        
+        .flash-success { animation: flash-green 0.2s ease-out; }
+        .flash-error { animation: flash-red 0.2s ease-out; }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #22c55e; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+        
+        /* Key Visuals */
+        .key-box {
+            border-bottom-width: 4px;
+            transition: all 0.1s;
+        }
+        .key-box:active, .key-box.pressed {
+            border-bottom-width: 0px;
+            transform: translateY(4px);
+        }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-green-500/30 p-4 lg:p-10 flex flex-col">
+
+    <div id="app" class="max-w-7xl mx-auto w-full animate-in fade-in duration-500 flex-1 flex flex-col">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            <div class="flex items-center gap-6">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Avg Latency</div>
+                    <div class="text-xl font-black text-white mono"><span id="avg-latency">0</span>ms</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Accuracy</div>
+                    <div class="text-xl font-black text-green-500 mono"><span id="accuracy">100</span>%</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+            
+            <div class="lg:col-span-4 space-y-6">
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-6 opacity-5">
+                        <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </div>
+                    
+                    <h2 class="text-xl font-extrabold text-white tracking-tight mb-6">PROTOCOL SETUP</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                <span>Session Duration</span>
+                                <span id="label-dur" class="text-green-400">60s</span>
+                            </div>
+                            <input type="range" id="input-dur" min="30" max="180" step="30" value="60" oninput="updateSettingsUI()" class="w-full">
+                        </div>
+
+                        <div class="p-4 bg-slate-800/50 rounded-xl border border-white/5">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase mb-2">Target Logic</div>
+                            <div class="grid grid-cols-2 gap-4 text-xs font-bold text-slate-300">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-none"></div>
+                                    <span>Square = LEFT</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <span>Circle = RIGHT</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="startGame()" id="btn-start" class="w-full bg-green-600 hover:bg-green-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-green-900/20 transition-all active:scale-95">
+                            Initialize Session
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Reaction Speed</h3>
+                    </div>
+                    <div class="h-32 w-full">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col">
+                <div id="game-stage" class="glass-card flex-1 rounded-[3rem] p-8 flex flex-col relative border border-slate-700/50 transition-colors duration-200 overflow-hidden">
+                    
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-slate-800">
+                        <div id="timer-bar" class="h-full bg-green-500 w-full transition-all duration-1000 ease-linear"></div>
+                    </div>
+
+                    <div class="flex-1 flex items-center justify-center">
+                        <div id="shape-container" class="transform transition-all duration-100">
+                            <div class="text-slate-600 font-mono text-sm animate-pulse">Waiting for initialization...</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid grid-cols-2 gap-12 max-w-2xl mx-auto w-full">
+                        <div id="key-left" class="key-box bg-slate-800 border-slate-900 text-slate-400 p-6 rounded-2xl text-center cursor-pointer hover:bg-slate-700 select-none" onclick="handleInput('left')">
+                            <div class="text-4xl mb-2">⬅️</div>
+                            <div class="text-[10px] font-black uppercase tracking-widest">Square</div>
+                            <div class="text-[10px] text-slate-600 font-mono mt-1 hidden md:block">[Left Arrow]</div>
+                        </div>
+                        <div id="key-right" class="key-box bg-slate-800 border-slate-900 text-slate-400 p-6 rounded-2xl text-center cursor-pointer hover:bg-slate-700 select-none" onclick="handleInput('right')">
+                            <div class="text-4xl mb-2">➡️</div>
+                            <div class="text-[10px] font-black uppercase tracking-widest">Circle</div>
+                            <div class="text-[10px] text-slate-600 font-mono mt-1 hidden md:block">[Right Arrow]</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG & STATE ---
+        let config = { duration: 60 };
+        let session = { active: false, score: 0, total: 0, latencies: [], startTime: 0, timer: null };
+        let currentShape = null; // 'square' or 'circle'
+        let shapeStartTime = 0;
+        let chart;
+
+        // --- INIT ---
+        window.onload = () => {
+            updateSettingsUI();
+            initChart();
+            
+            // Keyboard Listener
+            document.addEventListener('keydown', (e) => {
+                if(!session.active) return;
+                if(e.key === 'ArrowLeft') {
+                    simulatePress('left');
+                    handleInput('left');
+                }
+                if(e.key === 'ArrowRight') {
+                    simulatePress('right');
+                    handleInput('right');
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                if(e.key === 'ArrowLeft') simulateRelease('left');
+                if(e.key === 'ArrowRight') simulateRelease('right');
+            });
+        };
+
+        function updateSettingsUI() {
+            config.duration = parseInt(document.getElementById('input-dur').value);
+            document.getElementById('label-dur').innerText = `${config.duration}s`;
+        }
+
+        function simulatePress(side) {
+            document.getElementById(`key-${side}`).classList.add('pressed', 'border-green-500', 'text-green-400');
+        }
+        
+        function simulateRelease(side) {
+            document.getElementById(`key-${side}`).classList.remove('pressed', 'border-green-500', 'text-green-400');
+        }
+
+        // --- GAME ENGINE ---
+
+        function startGame() {
+            if(session.active) return;
+            
+            // Reset State
+            session = { active: true, score: 0, total: 0, latencies: [], startTime: Date.now(), timer: null };
+            document.getElementById('avg-latency').innerText = "0";
+            document.getElementById('accuracy').innerText = "100";
+            document.getElementById('btn-start').innerText = "Running...";
+            document.getElementById('btn-start').classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Start Timer
+            let timeLeft = config.duration;
+            document.getElementById('timer-bar').style.width = '100%';
+            session.timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-bar').style.width = `${(timeLeft / config.duration) * 100}%`;
+                if(timeLeft <= 0) endGame();
+            }, 1000);
+
+            nextShape();
+        }
+
+        function nextShape() {
+            if(!session.active) return;
+
+            // Random Shape
+            currentShape = Math.random() > 0.5 ? 'square' : 'circle';
+            const container = document.getElementById('shape-container');
+            
+            // Render
+            if(currentShape === 'square') {
+                container.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-none shadow-[0_0_30px_rgba(34,197,94,0.4)]"></div>';
+            } else {
+                container.innerHTML = '<div class="w-32 h-32 bg-green-500 rounded-full shadow-[0_0_30px_rgba(34,197,94,0.4)]"></div>';
+            }
+
+            shapeStartTime = performance.now();
+        }
+
+        function handleInput(side) {
+            if(!session.active) return;
+
+            const latency = performance.now() - shapeStartTime;
+            session.total++;
+            
+            // Check Logic
+            let correct = false;
+            if(side === 'left' && currentShape === 'square') correct = true;
+            if(side === 'right' && currentShape === 'circle') correct = true;
+
+            const stage = document.getElementById('game-stage');
+            
+            if(correct) {
+                session.score++;
+                session.latencies.push(latency);
+                updateLiveStats();
+                
+                // Visual Feedback (Subtle Green Flash)
+                stage.classList.add('flash-success');
+                setTimeout(() => stage.classList.remove('flash-success'), 200);
+            } else {
+                updateLiveStats();
+                // Visual Feedback (Red Flash)
+                stage.classList.add('flash-error');
+                setTimeout(() => stage.classList.remove('flash-error'), 200);
+            }
+
+            // Immediate Next Shape (High Frequency style)
+            nextShape();
+        }
+
+        function updateLiveStats() {
+            // Accuracy
+            const acc = Math.round((session.score / session.total) * 100);
+            document.getElementById('accuracy').innerText = acc;
+
+            // Latency (Moving Average of last 10)
+            const recent = session.latencies.slice(-10);
+            const avg = recent.length ? Math.round(recent.reduce((a,b)=>a+b,0) / recent.length) : 0;
+            document.getElementById('avg-latency').innerText = avg;
+
+            // Update Chart
+            updateChart(avg);
+        }
+
+        function endGame() {
+            session.active = false;
+            clearInterval(session.timer);
+            
+            document.getElementById('shape-container').innerHTML = '<div class="text-center"><div class="text-3xl font-black text-white mb-2">SESSION COMPLETE</div><div class="text-slate-500">Check stats panel</div></div>';
+            document.getElementById('btn-start').innerText = "Initialize Session";
+            document.getElementById('btn-start').classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            saveLog();
+        }
+
+        function saveLog() {
+            // Calculate final avg latency
+            const avgLat = session.latencies.length ? Math.round(session.latencies.reduce((a,b)=>a+b,0)/session.latencies.length) : 0;
+            
+            // You can save this to localStorage if you want tracking in the main hub later
+            // const logs = JSON.parse(localStorage.getItem('shapeshift_logs') || '[]');
+            // logs.push({ date: new Date().toLocaleDateString(), score: session.score, acc: session.score/session.total, lat: avgLat });
+            // localStorage.setItem('shapeshift_logs', JSON.stringify(logs));
+        }
+
+        // --- CHART ---
+        function initChart() {
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: [],
+                        borderColor: '#22c55e',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#475569' } }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        function updateChart(val) {
+            if(!chart) return;
+            chart.data.labels.push('');
+            chart.data.datasets[0].data.push(val);
+            
+            if(chart.data.labels.length > 50) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update();
+        }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

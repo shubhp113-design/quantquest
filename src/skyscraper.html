@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Skyscraper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Stack & Block Styles */
+        .stack-area { 
+            min-height: 14rem; /* Increased height for 10 blocks */
+            display: flex; flex-direction: column-reverse; align-items: center; 
+            border-bottom: 4px solid #334155; padding-bottom: 4px; transition: all 0.2s; position: relative;
+        }
+        .stack-area:hover { background-color: rgba(255,255,255,0.03); cursor: pointer; border-color: #9333ea; }
+        .selected-stack { background-color: rgba(147, 51, 234, 0.15); border-color: #d8b4fe; }
+        
+        .game-block { 
+            height: 1.25rem; /* Slightly smaller to fit 10 blocks */
+            border-radius: 0.25rem; margin-bottom: 0.15rem; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #9333ea; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        /* Modal Animations */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-exit { opacity: 0; transform: scale(0.95); transition: all 0.2s ease-in; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-purple-500/30 p-4 lg:p-10 flex flex-col">
+
+    <div id="app" class="max-w-7xl mx-auto w-full animate-in fade-in duration-500 flex-1 flex flex-col">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            
+            <div class="flex items-center gap-8">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time</div>
+                    <div class="text-xl font-black text-white mono" id="timer-display">00:00</div>
+                </div>
+
+                <div class="h-8 w-px bg-white/10"></div>
+
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-purple-400 uppercase tracking-widest">Efficiency</div>
+                    <div class="text-xl font-black text-purple-400 mono" id="efficiency-display">100%</div>
+                </div>
+
+                <div class="h-8 w-px bg-white/10"></div>
+
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Moves / Opt</div>
+                    <div class="text-xl font-black text-white mono">
+                        <span id="move-count">0</span><span class="text-slate-600 text-sm mx-1">/</span><span id="min-moves" class="text-slate-500 text-base">...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+            
+            <div class="lg:col-span-3 space-y-6">
+                
+                <div class="glass-card p-6 rounded-[2rem]">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center text-white">🏢</div>
+                        <h2 class="text-sm font-extrabold text-white tracking-widest uppercase">Settings</h2>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                            <span>Number of Blocks</span>
+                            <span id="label-blocks" class="text-purple-400">4 Blocks</span>
+                        </div>
+                        <input type="range" id="input-blocks" min="3" max="10" step="1" value="4" oninput="updateSettingsUI()" class="w-full">
+                    </div>
+
+                    <button onclick="initGame()" class="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-purple-900/20 transition-all active:scale-95">
+                        New Game
+                    </button>
+                </div>
+
+                <div class="glass-card p-6 rounded-[2rem] border border-slate-700/50">
+                    <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Live Efficiency</h3>
+                    <div class="relative h-32 w-full">
+                        <canvas id="effChart"></canvas>
+                    </div>
+                    <div class="mt-2 text-center">
+                        <span id="eff-text" class="text-2xl font-black text-green-400 mono">100%</span>
+                        <span class="text-[10px] text-slate-500 uppercase block">Current Rating</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-6 flex flex-col">
+                <div id="workspace-panel" class="glass-card flex-1 rounded-[3rem] p-8 flex flex-col justify-end relative border border-slate-700/50 transition-colors duration-500">
+                    <div class="absolute top-6 left-0 w-full text-center">
+                        <span class="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Your Workspace</span>
+                    </div>
+                    
+                    <div class="flex justify-center gap-4 h-full items-end pb-4" id="work-container">
+                        </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <div class="glass-card h-full rounded-[2rem] p-6 flex flex-col border-t-4 border-purple-500">
+                    <div class="text-center mb-6">
+                        <span class="text-xs font-black text-purple-400 uppercase tracking-[0.2em]">Target Goal</span>
+                    </div>
+                    <div class="flex-1 flex justify-center items-end gap-2 pb-4" id="target-container">
+                        </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="custom-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div id="modal-card" class="bg-slate-900 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full text-center transform transition-all duration-300 scale-95 relative overflow-hidden">
+            <div id="modal-glow" class="absolute top-0 left-0 w-full h-2 bg-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.5)]"></div>
+            <div id="modal-icon" class="text-6xl mb-6 transform transition-transform hover:scale-110 duration-300 inline-block">🏆</div>
+            <h2 id="modal-title" class="text-2xl font-black text-white mb-2 uppercase tracking-wide">Sequence Complete</h2>
+            <div id="modal-message" class="text-slate-400 mb-8 text-sm leading-relaxed">You solved the puzzle!</div>
+            <button id="modal-btn" onclick="closeModal()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-purple-900/30 transition-all active:scale-95">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        // Added 2 extra colors for 10 blocks (Cyan, Indigo)
+        const COLORS = [
+            '#ef4444', // Red
+            '#f97316', // Orange
+            '#eab308', // Yellow
+            '#22c55e', // Green
+            '#3b82f6', // Blue
+            '#a855f7', // Purple
+            '#ec4899', // Pink
+            '#14b8a6', // Teal
+            '#06b6d4', // Cyan
+            '#6366f1'  // Indigo
+        ]; 
+        let state = {
+            stacks: [[], [], []],
+            target: [[], [], []],
+            selected: -1,
+            moves: 0,
+            numBlocks: 3,
+            minMoves: 0,
+            startTime: 0,
+            timerInt: null,
+            calcOptimal: true
+        };
+        let chart;
+        let modalCallback = null;
+
+        // --- INIT ---
+        window.onload = () => {
+            updateSettingsUI();
+            initChart();
+            initGame();
+        };
+
+        function updateSettingsUI() {
+            const val = document.getElementById('input-blocks').value;
+            document.getElementById('label-blocks').innerText = `${val} Blocks`;
+        }
+
+        function initGame() {
+            state.numBlocks = parseInt(document.getElementById('input-blocks').value);
+            state.moves = 0;
+            state.selected = -1;
+            
+            // Optimization Check: Disable solver for > 6 blocks to prevent browser freeze
+            state.calcOptimal = state.numBlocks <= 6;
+
+            // Reset Counters
+            document.getElementById('move-count').innerText = 0;
+            document.getElementById('min-moves').innerText = state.calcOptimal ? "..." : "-";
+            document.getElementById('efficiency-display').innerText = state.calcOptimal ? "100%" : "N/A";
+            document.getElementById('efficiency-display').className = state.calcOptimal ? "text-xl font-black text-purple-400 mono" : "text-xl font-black text-slate-600 mono";
+            document.getElementById('workspace-panel').className = "glass-card flex-1 rounded-[3rem] p-8 flex flex-col justify-end relative border border-slate-700/50 transition-colors duration-500"; 
+            
+            // Reset Timer
+            if(state.timerInt) clearInterval(state.timerInt);
+            state.startTime = Date.now();
+            updateTimerDisplay(0);
+            state.timerInt = setInterval(() => {
+                const diff = Math.floor((Date.now() - state.startTime) / 1000);
+                updateTimerDisplay(diff);
+            }, 1000);
+
+            // Generate Puzzles
+            let blockColors = [];
+            for(let i = 0; i < state.numBlocks; i++) blockColors.push(i);
+
+            state.target = generateRandomDistribution([...blockColors]);
+
+            do {
+                state.stacks = generateRandomDistribution([...blockColors]);
+            } while (JSON.stringify(state.stacks) === JSON.stringify(state.target));
+
+            render();
+            resetChart();
+            
+            // Calc Optimal Moves (Only if within safe limit)
+            if (state.calcOptimal) {
+                setTimeout(() => {
+                    const min = solveBFS(state.stacks, state.target);
+                    state.minMoves = min;
+                    document.getElementById('min-moves').innerText = min;
+                    updateEfficiency(); 
+                }, 50);
+            } else {
+                state.minMoves = 0;
+            }
+        }
+
+        function updateTimerDisplay(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+
+        function generateRandomDistribution(blocks) {
+            let dist = [[], [], []];
+            blocks.sort(() => Math.random() - 0.5);
+            blocks.forEach(block => {
+                const randStack = Math.floor(Math.random() * 3);
+                dist[randStack].push(block);
+            });
+            return dist;
+        }
+
+        // --- CHART & EFFICIENCY ---
+        function initChart() {
+            const ctx = document.getElementById('effChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [0],
+                    datasets: [{
+                        label: 'Efficiency',
+                        data: [100],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: 0, max: 105 }
+                    },
+                    animation: { duration: 500 }
+                }
+            });
+        }
+
+        function resetChart() {
+            if(!chart) return;
+            chart.data.labels = [0];
+            chart.data.datasets[0].data = [100];
+            chart.data.datasets[0].borderColor = '#22c55e';
+            chart.data.datasets[0].backgroundColor = 'rgba(34, 197, 94, 0.1)';
+            chart.update();
+            if(state.calcOptimal) {
+                document.getElementById('eff-text').innerText = "100%";
+                document.getElementById('eff-text').className = "text-2xl font-black text-green-400 mono";
+            } else {
+                document.getElementById('eff-text').innerText = "N/A";
+                document.getElementById('eff-text').className = "text-2xl font-black text-slate-600 mono";
+            }
+        }
+
+        function updateEfficiency() {
+            if(!state.calcOptimal || state.minMoves === 0 || state.minMoves === "?") return;
+            
+            let eff = 100;
+            if(state.moves > state.minMoves) {
+                eff = Math.round((state.minMoves / state.moves) * 100);
+            }
+            
+            // Update Graph
+            chart.data.labels.push(state.moves);
+            chart.data.datasets[0].data.push(eff);
+            
+            // Color Logic
+            const el = document.getElementById('eff-text');
+            el.innerText = `${eff}%`;
+            
+            let color = '#22c55e'; // Green
+            let bg = 'rgba(34, 197, 94, 0.1)';
+            let textClass = "text-2xl font-black text-green-400 mono";
+
+            if(eff < 100 && eff >= 70) {
+                color = '#eab308'; // Yellow
+                bg = 'rgba(234, 179, 8, 0.1)';
+                textClass = "text-2xl font-black text-yellow-400 mono";
+            } else if(eff < 70) {
+                color = '#ef4444'; // Red
+                bg = 'rgba(239, 68, 68, 0.1)';
+                textClass = "text-2xl font-black text-red-400 mono";
+            }
+
+            chart.data.datasets[0].borderColor = color;
+            chart.data.datasets[0].backgroundColor = bg;
+            el.className = textClass;
+            chart.update();
+        }
+
+        // --- SOLVER (BFS) ---
+        function solveBFS(start, goal) {
+            const queue = [[start, 0]];
+            const visited = new Set();
+            const targetStr = JSON.stringify(goal);
+            visited.add(JSON.stringify(start));
+            let iterations = 0; const MAX_ITER = 30000; 
+
+            while(queue.length > 0) {
+                iterations++; if (iterations > MAX_ITER) return "?"; 
+                const [current, dist] = queue.shift();
+                if(JSON.stringify(current) === targetStr) return dist;
+
+                for(let from = 0; from < 3; from++) {
+                    if(current[from].length === 0) continue;
+                    for(let to = 0; to < 3; to++) {
+                        if(from === to) continue;
+                        const nextState = current.map(s => [...s]);
+                        nextState[to].push(nextState[from].pop());
+                        const nextStr = JSON.stringify(nextState);
+                        if(!visited.has(nextStr)) {
+                            visited.add(nextStr);
+                            queue.push([nextState, dist + 1]);
+                        }
+                    }
+                }
+            }
+            return "?";
+        }
+
+        // --- MODAL ---
+        function showModal(title, msg, type, callback = null) {
+            const modal = document.getElementById('custom-modal');
+            const card = document.getElementById('modal-card');
+            const glow = document.getElementById('modal-glow');
+            const icon = document.getElementById('modal-icon');
+            const btn = document.getElementById('modal-btn');
+
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerHTML = msg;
+            modalCallback = callback;
+
+            if(type === 'success') {
+                glow.className = "absolute top-0 left-0 w-full h-2 bg-purple-500 shadow-[0_0_40px_rgba(168,85,247,0.6)]";
+                icon.innerText = "🏆";
+                btn.className = "w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl uppercase tracking-widest text-xs shadow-lg shadow-purple-900/30 transition-all active:scale-95";
+                btn.innerText = "Next Puzzle";
+            } else {
+                glow.className = "absolute top-0 left-0 w-full h-2 bg-red-500 shadow-[0_0_40px_rgba(239,68,68,0.6)]";
+                icon.innerText = "⚠️";
+                btn.className = "w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl uppercase tracking-widest text-xs transition-all active:scale-95";
+                btn.innerText = "Try Again";
+            }
+
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => { modal.classList.remove('opacity-0'); card.classList.remove('scale-95'); card.classList.add('scale-100'); });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            const card = document.getElementById('modal-card');
+            modal.classList.add('opacity-0'); card.classList.remove('scale-100'); card.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); if(modalCallback) { modalCallback(); modalCallback = null; } }, 300);
+        }
+
+        // --- RENDER & LOGIC ---
+        function render() {
+            renderArea('target-container', state.target, false);
+            renderArea('work-container', state.stacks, true);
+        }
+
+        function renderArea(id, data, interactive) {
+            const el = document.getElementById(id);
+            const isSmall = !interactive; 
+            el.innerHTML = data.map((s, i) => {
+                const isActive = interactive && state.selected === i;
+                const baseClass = interactive ? 'w-24 stack-area' : 'w-12 border-b-2 border-slate-700 pb-1 flex flex-col-reverse items-center';
+                return `<div onclick="${interactive ? `handleClick(${i})` : ''}" class="${baseClass} ${isActive ? 'selected-stack' : ''}">${s.map(b => getBlockHTML(b)).join('')}</div>`
+            }).join('');
+        }
+
+        function getBlockHTML(colorIndex) {
+            const color = COLORS[colorIndex] || '#fff';
+            return `<div class="game-block w-4/5" style="background-color: ${color};"></div>`;
+        }
+
+        function handleClick(i) {
+            if (state.selected === -1) { if (state.stacks[i].length > 0) { state.selected = i; render(); } } 
+            else { if (state.selected === i) state.selected = -1; else attemptMove(state.selected, i); render(); }
+        }
+
+        function attemptMove(from, to) {
+            state.stacks[to].push(state.stacks[from].pop());
+            state.selected = -1;
+            state.moves++;
+            document.getElementById('move-count').innerText = state.moves;
+            updateEfficiency();
+            checkWin();
+        }
+
+        function checkWin() {
+            if (JSON.stringify(state.stacks) === JSON.stringify(state.target)) {
+                clearInterval(state.timerInt);
+                
+                // Visual Success Highlight
+                document.getElementById('workspace-panel').className = "glass-card flex-1 rounded-[3rem] p-8 flex flex-col justify-end relative border-4 border-green-500/50 shadow-[0_0_50px_rgba(34,197,94,0.2)] transition-all duration-500";
+                
+                setTimeout(() => {
+                    const time = document.getElementById('timer-display').innerText;
+                    const eff = document.getElementById('efficiency-display').innerText;
+                    
+                    let msg = `<div class="grid grid-cols-2 gap-4 text-left mb-4 bg-slate-800 p-4 rounded-xl border border-white/5">
+                        <div><div class="text-[10px] text-slate-500 uppercase tracking-wider">Time</div><div class="text-white font-bold text-lg font-mono">${time}</div></div>
+                        <div><div class="text-[10px] text-slate-500 uppercase tracking-wider">Efficiency</div><div class="${eff === '100%' ? 'text-green-400' : 'text-yellow-400'} font-bold text-lg font-mono">${eff}</div></div>
+                    </div>`;
+                    
+                    // Only show optimal stats if optimal was calculated
+                    if (state.calcOptimal && state.minMoves !== "?") {
+                        if (state.moves <= state.minMoves) msg += `<span class="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-900/20 px-3 py-1 rounded-full">★ Perfect Efficiency ★</span>`;
+                        else {
+                            const diff = state.moves - state.minMoves;
+                            msg += `<span class="text-slate-400 text-xs">+${diff} moves over optimal (${state.minMoves})</span>`;
+                        }
+                    } else {
+                        msg += `<span class="text-slate-400 text-xs italic">Complexity too high for optimal calculation</span>`;
+                    }
+                    
+                    showModal("Target Matched", msg, "success", initGame);
+                }, 300);
+            }
+        }
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

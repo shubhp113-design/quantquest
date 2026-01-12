@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantQuest | Market Making Dice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #020617; 
+            color: #e2e8f0;
+            /* Noise Texture Background */
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Glass Panel */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.1);
+        }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px; width: 20px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2px solid #064e3b;
+            cursor: pointer;
+            margin-top: -8px;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px;
+            cursor: pointer;
+            background: #334155;
+            border-radius: 2px;
+        }
+
+        /* Dice Styles */
+        .die {
+            width: 64px; height: 64px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: 800;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .die.revealed { background: #1e293b; color: #94a3b8; border-color: #475569; transform: scale(0.95); }
+        .die.active-value { border-color: #10b981; color: #10b981; background: rgba(16, 185, 129, 0.1); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+        .die.zero-value { opacity: 0.3; }
+
+        /* Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Animation */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 lg:p-8">
+
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-[#020617]/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-3xl rounded-3xl p-8 relative overflow-hidden animate-enter border border-emerald-500/20 max-h-[95vh] flex flex-col">
+            
+            <div class="mb-6 border-b border-white/10 pb-4 flex justify-between items-center flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <a href="market-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900 px-3 py-2 rounded-lg border border-slate-700 hover:border-slate-500">
+                        <span>←</span> Desk
+                    </a>
+                    <div>
+                        <h1 class="text-2xl font-black text-white tracking-tight">Market Making <span class="text-emerald-500">Dice</span></h1>
+                        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Configuration</p>
+                    </div>
+                </div>
+                <div class="px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-slate-400">
+                    Budget: <span class="text-white">500</span>
+                </div>
+            </div>
+
+            <div class="overflow-y-auto custom-scrollbar pr-2 flex-1">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-8">
+                    <div class="space-y-8">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-4">Game Difficulty</label>
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="radio" name="difficulty" value="easy" onclick="applyPreset('easy')" class="peer sr-only">
+                                    <div class="w-4 h-4 rounded-full border border-slate-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 transition-colors"></div>
+                                    <span class="text-slate-300 group-hover:text-white font-medium transition peer-checked:text-emerald-400 peer-checked:font-bold">Easy</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="radio" name="difficulty" value="medium" onclick="applyPreset('medium')" class="peer sr-only" checked>
+                                    <div class="w-4 h-4 rounded-full border border-slate-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 transition-colors"></div>
+                                    <span class="text-slate-300 group-hover:text-white font-medium transition peer-checked:text-emerald-400 peer-checked:font-bold">Medium</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="radio" name="difficulty" value="hard" onclick="applyPreset('hard')" class="peer sr-only">
+                                    <div class="w-4 h-4 rounded-full border border-slate-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 transition-colors"></div>
+                                    <span class="text-slate-300 group-hover:text-white font-medium transition peer-checked:text-emerald-400 peer-checked:font-bold">Hard</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer group">
+                                    <input type="radio" name="difficulty" value="custom" id="radio-custom" class="peer sr-only">
+                                    <div class="w-4 h-4 rounded-full border border-slate-500 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 transition-colors"></div>
+                                    <span class="text-slate-300 group-hover:text-white font-medium transition peer-checked:text-emerald-400 peer-checked:font-bold">Custom</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 pt-2 border-t border-white/5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-slate-300">Show Balance</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-balance" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-slate-300">Enable Market Events</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-events" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-bold text-slate-300">Verify PnL Mode</div>
+                                    <div class="text-[10px] text-slate-500">Incorrect PnL = $50 Penalty</div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-pnl-check" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Number of Dice</label>
+                                <span id="val-dice" class="text-xs font-bold text-emerald-400 mono">4</span>
+                            </div>
+                            <input type="range" id="slider-dice" min="1" max="12" value="4" oninput="updateCustom('dice', this.value)">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Number of Rounds</label>
+                                <span id="val-rounds" class="text-xs font-bold text-emerald-400 mono">10</span>
+                            </div>
+                            <input type="range" id="slider-rounds" min="5" max="50" value="10" step="5" oninput="updateCustom('rounds', this.value)">
+                        </div>
+                        <div>
+                            <div class="flex justify-between mb-2">
+                                <label class="text-xs font-bold text-slate-500 uppercase tracking-widest">Time to Answer</label>
+                                <span id="val-time" class="text-xs font-bold text-emerald-400 mono">10s</span>
+                            </div>
+                            <input type="range" id="slider-time" min="3" max="30" value="10" oninput="updateCustom('time', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/50 rounded-2xl p-6 border border-white/5 mb-4">
+                    <h3 class="text-sm font-bold text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Mission Briefing
+                    </h3>
+                    <div class="prose prose-invert prose-sm max-w-none text-slate-400 leading-relaxed space-y-6">
+                        
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Objective</h4>
+                            <p>Maximize your expected profit over a series of trading rounds.</p>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">How to Play</h4>
+                            <p>At the beginning of each round, you will be presented with a set of dice. These dice are valued between 1 and 6. Some of these dice may have values, while others have their values hidden.</p>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Market Maker Quote</h4>
+                            <p>Alongside the dice, you'll see a market maker quote displayed as X at Y. Here's what they represent:</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li><strong class="text-red-400">X (Bid):</strong> The price the market maker is willing to buy at.</li>
+                                <li><strong class="text-emerald-400">Y (Ask):</strong> The price the market maker is willing to sell at.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Time To Trade</h4>
+                            <p>With a starting budget of 500:</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>Decide the number of units you wish to trade.</li>
+                                <li>Choose whether you want to buy (at the Ask price) or sell (at the Bid price) those units at the given market maker quote.</li>
+                            </ul>
+                            <p class="mt-2 text-xs opacity-75">Just like in the real market, an offer remains valid only for a limited amount of time. So, act quickly!</p>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Valid Orders</h4>
+                            <p>Ensure that your orders are valid:</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>You should be able to afford any long position you take based on your budget.</li>
+                                <li>Similarly, your balance should always cover the maximum possible loss for any short position you take.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Outcome</h4>
+                            <p>Once you make your decision:</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>The values of all dice are shown.</li>
+                                <li>The sum of the dice values represents the market price for that round.</li>
+                                <li>Based on your decision and the resulting market price, you'll either realize a profit or a loss.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Track Your Position</h4>
+                            <p>Being aware of your position is crucial:</p>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>After each round, you'll be asked to report your return.</li>
+                                <li>For higher difficulty levels, you'll also need to maintain a mental record of your balance throughout the entire game.</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Market Events</h4>
+                            <p>When enabled, the following market events can randomly occur during each round:</p>
+                            <ul class="list-disc pl-4 space-y-1 text-xs">
+                                <li>Only dice showing 5 or 6 this round.</li>
+                                <li>Only dice showing 1 or 2 this round.</li>
+                                <li>Only dice showing 1 and 6 this round.</li>
+                                <li>Only dice showing even numbers (2, 4, 6) this round.</li>
+                                <li>Only dice showing odd numbers (1, 3, 5) this round.</li>
+                                <li>A dice showing 1 is worth 7 this round.</li>
+                            </ul>
+                            <p class="mt-2">Keep in mind that these events can influence the validity of your order.</p>
+                        </div>
+
+                        <div>
+                            <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Strategy</h4>
+                            <p>The market maker provides random quotes. Your advantage lies in your understanding of expected values and the insights from the face-up dice. Use this knowledge to outsmart the market maker and anticipate the market price. If you enable market events, be prepared for occasional changes to the card deck, which will influence and challenge your optimal trading strategy.</p>
+                        </div>
+
+                        <p class="text-center font-bold text-emerald-500 pt-4">Best of luck in your trades and strategizing!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-white/5 flex-shrink-0">
+                <button onclick="initGame()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-emerald-900/20 transition-all transform active:scale-[0.99] border border-emerald-500/50">
+                    Start Trading Session
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pnl-overlay" class="hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 border-t border-emerald-500/30 p-6 backdrop-blur-xl shadow-2xl transition-transform duration-300 transform translate-y-full">
+        <div class="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex-1">
+                <h3 class="text-lg font-black text-white mb-1">VERIFY SETTLEMENT</h3>
+                <p class="text-slate-400 text-xs">Calculate your Profit/Loss based on the dice settlement. (Hint: Look at the settlement value above!)</p>
+            </div>
+            
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="relative flex-1 md:w-48">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">$</span>
+                    <input type="number" id="input-pnl" placeholder="P/L" class="w-full bg-slate-800 border border-slate-600 rounded-xl py-3 pl-8 pr-4 text-white font-bold outline-none focus:border-yellow-500 transition-colors">
+                </div>
+                <button onclick="submitPnL()" class="bg-yellow-600 hover:bg-yellow-500 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs shadow-lg shadow-yellow-900/20 transition-all whitespace-nowrap">
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-ui" class="w-full max-w-5xl hidden animate-enter pb-32"> 
+        <div class="flex justify-between items-end mb-8 border-b border-white/10 pb-6">
+            <div class="flex items-center gap-4">
+                <div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Portfolio Balance</div>
+                    <div class="text-4xl font-black text-white mono" id="balance-display">500.00</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Round Progress</div>
+                <div class="text-2xl font-bold text-white mono"><span id="round-current" class="text-emerald-500">1</span><span class="text-slate-600 mx-2">/</span><span id="round-total" class="text-slate-600">10</span></div>
+            </div>
+        </div>
+
+        <div id="event-banner" class="hidden w-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-6 py-4 rounded-2xl mb-8 text-sm font-bold flex items-center justify-center gap-3 animate-pulse">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <span id="event-text">MARKET EVENT ACTIVE</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-8">
+                <div class="glass-panel rounded-[2rem] p-8 relative overflow-hidden h-full flex flex-col">
+                    <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-800">
+                        <div id="timer-bar" class="h-full bg-emerald-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(16,185,129,0.5)]" style="width: 100%"></div>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center py-8">
+                        <div class="flex flex-wrap justify-center gap-4 mb-6" id="dice-container"></div>
+                        <div id="result-overlay" class="h-8 flex items-center justify-center opacity-0 transition-opacity duration-300">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest mr-3">Settlement Value</span>
+                            <span id="actual-value" class="text-2xl font-black text-emerald-400 mono">0</span>
+                        </div>
+                    </div>
+                    <div class="border-t border-white/5 pt-8">
+                        <div class="grid grid-cols-2 gap-8 mb-8">
+                            <div class="text-center cursor-pointer group p-4 rounded-2xl hover:bg-red-500/5 transition-colors border border-transparent hover:border-red-500/20" onclick="setIntent('sell')">
+                                <div class="text-[10px] uppercase text-slate-500 font-bold mb-2 group-hover:text-red-400">BID (Sell)</div>
+                                <div class="text-5xl font-black text-red-500 mono tracking-tighter" id="quote-bid">--</div>
+                            </div>
+                            <div class="text-center cursor-pointer group p-4 rounded-2xl hover:bg-emerald-500/5 transition-colors border border-transparent hover:border-emerald-500/20" onclick="setIntent('buy')">
+                                <div class="text-[10px] uppercase text-slate-500 font-bold mb-2 group-hover:text-emerald-400">ASK (Buy)</div>
+                                <div class="text-5xl font-black text-emerald-500 mono tracking-tighter" id="quote-ask">--</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 bg-slate-900/50 p-2 rounded-2xl border border-white/5">
+                            <div class="bg-slate-800 rounded-xl px-4 py-3 flex items-center gap-3 border border-slate-700">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">UNITS</span>
+                                <input type="number" id="units-input" value="10" min="1" max="100" class="bg-transparent text-lg font-black text-white outline-none w-16 text-right mono">
+                            </div>
+                            <div class="h-8 w-px bg-slate-700"></div>
+                            <div class="flex-1 grid grid-cols-3 gap-2" id="action-buttons">
+                                <button onclick="submitOrder('sell')" class="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/30 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">Sell</button>
+                                <button onclick="submitOrder('pass')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">Pass</button>
+                                <button onclick="submitOrder('buy')" class="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white border border-emerald-500/30 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all">Buy</button>
+                            </div>
+                        </div>
+                        <div id="error-msg" class="text-xs text-red-400 text-center mt-3 font-bold h-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4">
+                <div class="glass-panel rounded-[2rem] p-6 h-full flex flex-col">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Trading Ledger</h3>
+                    <div class="flex-1 overflow-auto pr-2 custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="text-[10px] text-slate-500 uppercase font-bold sticky top-0 bg-[#0f172a] z-10">
+                                <tr>
+                                    <th class="pb-4">Rd</th>
+                                    <th class="pb-4">Act</th>
+                                    <th class="pb-4 text-right">Set</th>
+                                    <th class="pb-4 text-right">P/L</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trade-log" class="font-mono text-sm text-slate-300"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="hidden fixed inset-0 z-[60] bg-slate-950/95 flex items-center justify-center p-4">
+        <div class="text-center max-w-md w-full animate-enter">
+            <h1 class="text-5xl font-black text-white mb-2 tracking-tighter">MARKET CLOSED</h1>
+            <div class="w-24 h-1 bg-slate-800 mx-auto mb-8 rounded-full"></div>
+            <div class="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 mb-8">
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Final PnL</div>
+                <div class="text-6xl font-black mono mb-2" id="final-score">0.00</div>
+                <div id="final-sub" class="text-sm font-bold text-slate-400">Starting Capital: 500</div>
+            </div>
+            <button onclick="location.reload()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-12 py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-emerald-900/20 transition-all border border-emerald-500/50">New Session</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG & STATE ---
+        let config = { diceCount: 4, rounds: 10, roundDuration: 10, showBalance: true, eventsEnabled: false, pnlCheck: false, difficulty: 'medium' };
+        
+        const PRESETS = {
+            easy: { dice: 3, rounds: 10, time: 15, events: false },
+            medium: { dice: 4, rounds: 10, time: 10, events: false },
+            hard: { dice: 6, rounds: 20, time: 5, events: true }
+        };
+
+        const EVENTS = [
+            { id: 'normal', text: 'Standard Market Rules', func: (val) => val },
+            { id: 'high', text: 'Only dice showing 5 or 6 count', func: (val) => (val >= 5 ? val : 0) },
+            { id: 'low', text: 'Only dice showing 1 or 2 count', func: (val) => (val <= 2 ? val : 0) },
+            { id: 'ends', text: 'Only dice showing 1 and 6 count', func: (val) => (val === 1 || val === 6 ? val : 0) },
+            { id: 'even', text: 'Only dice showing even numbers count', func: (val) => (val % 2 === 0 ? val : 0) },
+            { id: 'odd', text: 'Only dice showing odd numbers count', func: (val) => (val % 2 !== 0 ? val : 0) },
+            { id: 'lucky1', text: 'A dice showing 1 is worth 7', func: (val) => (val === 1 ? 7 : val) }
+        ];
+
+        let state = { balance: 500, round: 1, active: false, timer: null, currentEvent: EVENTS[0], dice: [], quote: { bid: 0, ask: 0 }, timeLeft: 0, pendingData: null };
+
+        // --- PERSISTENCE ---
+        window.onload = function() {
+            const saved = localStorage.getItem('quant_mm_config');
+            if(saved) {
+                config = JSON.parse(saved);
+                document.getElementById('slider-dice').value = config.diceCount;
+                document.getElementById('slider-rounds').value = config.rounds;
+                document.getElementById('slider-time').value = config.roundDuration;
+                document.getElementById('toggle-balance').checked = config.showBalance;
+                document.getElementById('toggle-events').checked = config.eventsEnabled;
+                document.getElementById('toggle-pnl-check').checked = config.pnlCheck;
+                
+                const radios = document.getElementsByName('difficulty');
+                let found = false;
+                for(let r of radios) {
+                    if(r.value === config.difficulty) { r.checked = true; found = true; }
+                    else r.checked = false;
+                }
+                if(!found) document.getElementById('radio-custom').checked = true;
+
+                updateCustom('dice', config.diceCount);
+                updateCustom('rounds', config.rounds);
+                updateCustom('time', config.roundDuration);
+            }
+        };
+
+        function saveSettings() {
+            localStorage.setItem('quant_mm_config', JSON.stringify(config));
+        }
+
+        // --- SETTINGS UI ---
+        function applyPreset(level) {
+            config.difficulty = level;
+            const p = PRESETS[level];
+            document.getElementById('slider-dice').value = p.dice;
+            document.getElementById('slider-rounds').value = p.rounds;
+            document.getElementById('slider-time').value = p.time;
+            document.getElementById('toggle-events').checked = p.events;
+            updateCustom('dice', p.dice);
+            updateCustom('rounds', p.rounds);
+            updateCustom('time', p.time);
+            document.querySelectorAll('input[name="difficulty"]').forEach(r => r.checked = (r.value === level));
+        }
+
+        function updateCustom(type, val) {
+            if(type === 'dice') document.getElementById('val-dice').innerText = val;
+            if(type === 'rounds') document.getElementById('val-rounds').innerText = val;
+            if(type === 'time') document.getElementById('val-time').innerText = val + 's';
+            if(window.event && window.event.type === 'input') {
+                document.getElementById('radio-custom').checked = true;
+                config.difficulty = 'custom';
+            }
+        }
+
+        function initGame() {
+            config.diceCount = parseInt(document.getElementById('slider-dice').value);
+            config.rounds = parseInt(document.getElementById('slider-rounds').value);
+            config.roundDuration = parseInt(document.getElementById('slider-time').value);
+            config.showBalance = document.getElementById('toggle-balance').checked;
+            config.eventsEnabled = document.getElementById('toggle-events').checked;
+            config.pnlCheck = document.getElementById('toggle-pnl-check').checked;
+            if(document.getElementById('radio-custom').checked) config.difficulty = 'custom';
+
+            saveSettings();
+
+            document.getElementById('settings-modal').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('round-total').innerText = config.rounds;
+            updateBalanceUI();
+            startRound();
+        }
+
+        // --- GAME ENGINE ---
+        function startRound() {
+            if (state.round > config.rounds) { endGame(); return; }
+            state.active = true;
+            state.timeLeft = config.roundDuration;
+            
+            document.getElementById('result-overlay').style.opacity = '0';
+            document.getElementById('action-buttons').style.opacity = '1';
+            document.getElementById('action-buttons').style.pointerEvents = 'auto';
+            document.getElementById('error-msg').innerText = '';
+            document.getElementById('round-current').innerText = state.round;
+            document.getElementById('timer-bar').className = "h-full bg-emerald-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+
+            if (config.eventsEnabled && Math.random() > 0.4) {
+                const validEvents = EVENTS.slice(1);
+                state.currentEvent = validEvents[Math.floor(Math.random() * validEvents.length)];
+                document.getElementById('event-banner').classList.remove('hidden');
+                document.getElementById('event-text').innerText = state.currentEvent.text;
+            } else {
+                state.currentEvent = EVENTS[0];
+                document.getElementById('event-banner').classList.add('hidden');
+            }
+
+            generateDiceAndQuote();
+            startTimer();
+        }
+
+        function generateDiceAndQuote() {
+            state.dice = [];
+            let visibleSum = 0; let hiddenCount = 0;
+            for (let i = 0; i < config.diceCount; i++) {
+                const val = Math.floor(Math.random() * 6) + 1;
+                const hidden = (Math.random() > 0.4) && (i > 0); 
+                state.dice.push({ value: val, hidden: hidden });
+                if (!hidden) visibleSum += state.currentEvent.func(val); else hiddenCount++;
+            }
+            renderDice();
+
+            let hiddenEV = 3.5;
+            if(state.currentEvent.id === 'high') hiddenEV = 1.83; 
+            if(state.currentEvent.id === 'low') hiddenEV = 0.5;
+            if(state.currentEvent.id === 'ends') hiddenEV = 1.16;
+            if(state.currentEvent.id === 'even') hiddenEV = 2; // Valid: 2,4,6 = (2+4+6)/6 = 2
+            if(state.currentEvent.id === 'odd') hiddenEV = 1.5; // Valid: 1,3,5 = (1+3+5)/6 = 1.5
+            if(state.currentEvent.id === 'lucky1') hiddenEV = 4.5; // Valid: 7,2,3,4,5,6 = 27/6 = 4.5
+
+            const fairValue = visibleSum + (hiddenCount * hiddenEV);
+            const noise = (Math.random() * 4) - 2;
+            const spread = Math.floor(Math.random() * 3) + 2;
+            const mid = Math.round(fairValue + noise);
+            state.quote.bid = mid - Math.floor(spread/2);
+            state.quote.ask = mid + Math.ceil(spread/2);
+            document.getElementById('quote-bid').innerText = state.quote.bid;
+            document.getElementById('quote-ask').innerText = state.quote.ask;
+        }
+
+        function renderDice() {
+            const container = document.getElementById('dice-container'); container.innerHTML = '';
+            state.dice.forEach(d => {
+                const el = document.createElement('div');
+                el.className = `die mono ${d.hidden ? 'text-slate-600' : 'text-emerald-400'}`;
+                el.innerText = d.hidden ? '?' : d.value;
+                if(!d.hidden && state.currentEvent.func(d.value) === 0) el.classList.add('zero-value');
+                else if(!d.hidden && state.currentEvent.id !== 'normal') el.classList.add('active-value');
+                container.appendChild(el);
+            });
+        }
+
+        function startTimer() {
+            if (state.timer) clearInterval(state.timer);
+            const bar = document.getElementById('timer-bar');
+            state.timer = setInterval(() => {
+                state.timeLeft -= 0.1;
+                const pct = (state.timeLeft / config.roundDuration) * 100;
+                bar.style.width = `${pct}%`;
+                if(pct < 30) bar.className = "h-full bg-red-500 transition-all duration-100 ease-linear shadow-[0_0_10px_rgba(239,68,68,0.5)]";
+                else if(pct < 60) bar.className = "h-full bg-yellow-500 transition-all duration-100 ease-linear";
+                if (state.timeLeft <= 0) { clearInterval(state.timer); submitOrder('pass'); }
+            }, 100);
+        }
+
+        function submitOrder(type) {
+            if (!state.active) return;
+            clearInterval(state.timer);
+            state.active = false;
+            document.getElementById('action-buttons').style.opacity = '0.5';
+            document.getElementById('action-buttons').style.pointerEvents = 'none';
+
+            const units = parseInt(document.getElementById('units-input').value);
+            const errorEl = document.getElementById('error-msg');
+
+            if (type === 'buy') {
+                if ((units * state.quote.ask) > state.balance) {
+                    errorEl.innerText = "INSUFFICIENT FUNDS";
+                    resolveRound('pass', 0); return;
+                }
+            } else if (type === 'sell') {
+                if (state.balance < 0) {
+                     errorEl.innerText = "BANKRUPT";
+                     resolveRound('pass', 0); return;
+                }
+            }
+            resolveRound(type, units);
+        }
+
+        function resolveRound(action, units) {
+            const container = document.getElementById('dice-container'); container.innerHTML = '';
+            let actualTotal = 0;
+            state.dice.forEach(d => {
+                const val = d.value; const effectiveVal = state.currentEvent.func(val); actualTotal += effectiveVal;
+                const el = document.createElement('div');
+                el.className = `die mono text-white ${d.hidden ? 'revealed border-yellow-500' : ''}`;
+                el.innerText = val;
+                if(effectiveVal === 0) el.classList.add('zero-value');
+                else if(state.currentEvent.id !== 'normal') el.classList.add('active-value');
+                container.appendChild(el);
+            });
+
+            document.getElementById('actual-value').innerText = actualTotal;
+            document.getElementById('result-overlay').style.opacity = '1';
+
+            let pnl = 0; let executionPrice = 0;
+            if (action === 'buy') { executionPrice = state.quote.ask; pnl = (actualTotal - executionPrice) * units; } 
+            else if (action === 'sell') { executionPrice = state.quote.bid; pnl = (executionPrice - actualTotal) * units; }
+
+            if (config.pnlCheck && action !== 'pass') {
+                state.pendingData = { pnl, action, executionPrice, actualTotal };
+                document.getElementById('input-pnl').value = '';
+                // SHOW BOTTOM BAR OVERLAY
+                const overlay = document.getElementById('pnl-overlay');
+                overlay.classList.remove('hidden');
+                // Small delay to allow transition
+                setTimeout(() => {
+                    overlay.classList.remove('translate-y-full');
+                }, 10);
+            } else {
+                state.balance += pnl;
+                finishTurn(action, executionPrice, actualTotal, pnl);
+            }
+        }
+
+        function submitPnL() {
+            const input = parseFloat(document.getElementById('input-pnl').value);
+            const actual = state.pendingData.pnl;
+            const data = state.pendingData;
+            
+            if (Math.abs(input - actual) < 0.1) {
+                state.balance += actual;
+            } else {
+                if (actual < 0) state.balance += (actual - 50);
+                else state.balance -= 50;
+            }
+
+            // HIDE BOTTOM BAR OVERLAY
+            const overlay = document.getElementById('pnl-overlay');
+            overlay.classList.add('translate-y-full');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                finishTurn(data.action, data.executionPrice, data.actualTotal, actual);
+            }, 300);
+        }
+
+        function finishTurn(action, price, settle, pnl) {
+            updateBalanceUI();
+            addLog(action, price, settle, pnl);
+            setTimeout(() => { state.round++; startRound(); }, 2500);
+        }
+
+        function updateBalanceUI() {
+            const el = document.getElementById('balance-display');
+            if(config.showBalance) {
+                el.innerText = state.balance.toFixed(2);
+                if(state.balance < 0) el.classList.add('text-red-500'); else el.classList.remove('text-red-500');
+            } else {
+                el.innerText = "HIDDEN"; el.classList.add('text-slate-600');
+            }
+        }
+
+        function addLog(action, price, settle, pnl) {
+            const row = document.createElement('tr');
+            row.className = "border-b border-slate-800/50 hover:bg-white/5 transition";
+            const pnlClass = pnl > 0 ? 'text-emerald-400' : (pnl < 0 ? 'text-red-400' : 'text-slate-500');
+            const actionColor = action === 'buy' ? 'text-emerald-500' : (action === 'sell' ? 'text-red-500' : 'text-slate-500');
+            row.innerHTML = `<td class="py-3 pl-2 text-slate-500">${state.round}</td><td class="py-3 font-bold ${actionColor}">${action.substring(0,1).toUpperCase()}</td><td class="py-3 text-right text-slate-400">${settle}</td><td class="py-3 text-right font-bold ${pnlClass}">${pnl === 0 ? '-' : pnl.toFixed(0)}</td>`;
+            document.getElementById('trade-log').insertBefore(row, document.getElementById('trade-log').firstChild);
+        }
+
+        function endGame() {
+            document.getElementById('game-over-modal').classList.remove('hidden');
+            document.getElementById('game-over-modal').classList.add('flex');
+            const scoreEl = document.getElementById('final-score');
+            scoreEl.innerText = state.balance.toFixed(2);
+            if(state.balance >= 500) scoreEl.className = "text-6xl font-black mono mb-2 text-emerald-400"; else scoreEl.className = "text-6xl font-black mono mb-2 text-red-400";
+        }
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

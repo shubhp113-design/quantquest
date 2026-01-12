@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Zap-N Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Card Base Styles */
+        .app-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05); display: block; }
+        .app-card:hover { transform: translateY(-5px); }
+        
+        /* Color Themes */
+        .blue-theme:hover { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.2); }
+        .purple-theme:hover { border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 20px 40px -10px rgba(168, 85, 247, 0.2); }
+        .green-theme:hover { border-color: rgba(34, 197, 94, 0.5); box-shadow: 0 20px 40px -10px rgba(34, 197, 94, 0.2); }
+        .orange-theme:hover { border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 20px 40px -10px rgba(249, 115, 22, 0.2); }
+        .red-theme:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 20px 40px -10px rgba(239, 68, 68, 0.2); }
+        .teal-theme:hover { border-color: rgba(20, 184, 166, 0.5); box-shadow: 0 20px 40px -10px rgba(20, 184, 166, 0.2); }
+        .pink-theme:hover { border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 20px 40px -10px rgba(236, 72, 153, 0.2); }
+        .yellow-theme:hover { border-color: rgba(234, 179, 8, 0.5); box-shadow: 0 20px 40px -10px rgba(234, 179, 8, 0.2); }
+        .cyan-theme:hover { border-color: rgba(6, 182, 212, 0.5); box-shadow: 0 20px 40px -10px rgba(6, 182, 212, 0.2); }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-orange-500/30 p-4 lg:p-10">
+
+    <div id="hub-view" class="max-w-7xl mx-auto animate-in fade-in duration-500">
+        
+        <header class="mb-10 border-b border-white/10 pb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-2">ZAP-N <span class="text-orange-500">SUITE</span></h1>
+                <p class="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">Full Assessment Simulation</p>
+            </div>
+            <a href="../index.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Return to Desk
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <a href="balloon.html" class="app-card blue-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-blue-500 transform rotate-12 translate-x-4 -translate-y-4">🎈</div>
+                </div>
+                <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl">🎈</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors relative z-10">Balloon Game</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Risk vs Reward. Pump the balloon to bank cash without popping it.</p>
+                <div class="flex items-center text-xs font-bold text-blue-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="skyscraper.html" class="app-card purple-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-purple-500 transform rotate-12 translate-x-4 -translate-y-4">🏢</div>
+                </div>
+                <div class="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl">🏢</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-purple-400 transition-colors relative z-10">Skyscraper</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Logic & Planning. Replicate the target tower structure in minimum moves.</p>
+                <div class="flex items-center text-xs font-bold text-purple-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="shapeshift.html" class="app-card green-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-green-500 transform rotate-12 translate-x-4 -translate-y-4">▲</div>
+                </div>
+                <div class="w-14 h-14 bg-green-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">▲</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-green-400 transition-colors relative z-10">Shape Shift</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Rapid Attention. Match shapes to correct directional inputs under time pressure.</p>
+                <div class="flex items-center text-xs font-bold text-green-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="codecompare.html" class="app-card orange-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-orange-500 transform rotate-12 translate-x-4 -translate-y-4">#</div>
+                </div>
+                <div class="w-14 h-14 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">#</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-orange-400 transition-colors relative z-10">Code Compare</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Data Accuracy. Identify the identical alphanumeric sequence from a list of variants.</p>
+                <div class="flex items-center text-xs font-bold text-orange-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="pincode.html" class="app-card red-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-red-500 transform rotate-12 translate-x-4 -translate-y-4">🔒</div>
+                </div>
+                <div class="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl">🔒</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-red-400 transition-colors relative z-10">Pin Code</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Short-term Memory. Recall digit sequences in direct, reverse, and sorted orders.</p>
+                <div class="flex items-center text-xs font-bold text-red-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="numberbox.html" class="app-card teal-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-teal-500 transform rotate-12 translate-x-4 -translate-y-4">∑</div>
+                </div>
+                <div class="w-14 h-14 bg-teal-600 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">∑</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-teal-400 transition-colors relative z-10">Number Box</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Mental Math. Manipulate available integers to equal the target value.</p>
+                <div class="flex items-center text-xs font-bold text-teal-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="figureitout.html" class="app-card pink-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-pink-500 transform rotate-12 translate-x-4 -translate-y-4">?</div>
+                </div>
+                <div class="w-14 h-14 bg-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-pink-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">?</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-pink-400 transition-colors relative z-10">Figure It Out</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Inductive Reasoning. Deduce hidden rules about shape and color via feedback.</p>
+                <div class="flex items-center text-xs font-bold text-pink-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="theswitch.html" class="app-card yellow-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-yellow-500 transform rotate-12 translate-x-4 -translate-y-4">⇄</div>
+                </div>
+                <div class="w-14 h-14 bg-yellow-500 rounded-2xl flex items-center justify-center shadow-lg shadow-yellow-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">⇄</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-yellow-400 transition-colors relative z-10">The Switch</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Task Switching. Rapidly alternate between mathematical and logical sorting tasks.</p>
+                <div class="flex items-center text-xs font-bold text-yellow-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+            <a href="stockmaster.html" class="app-card cyan-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <div class="text-9xl text-cyan-500 transform rotate-12 translate-x-4 -translate-y-4">📈</div>
+                </div>
+                <div class="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-900/40 mb-6 group-hover:scale-110 transition-transform relative z-10">
+                    <span class="text-2xl text-white font-black">📈</span>
+                </div>
+                <h3 class="text-2xl font-black text-white mb-2 group-hover:text-cyan-400 transition-colors relative z-10">Stock Master</h3>
+                <p class="text-slate-500 text-sm leading-relaxed mb-6 relative z-10">Reaction Timing. Execute trades (clicks) when indicators align with optimal zones.</p>
+                <div class="flex items-center text-xs font-bold text-cyan-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 relative z-10">
+                    Launch Module →
+                </div>
+            </a>
+
+        </div>
+    </div>
+
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

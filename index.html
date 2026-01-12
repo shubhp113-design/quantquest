@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantQuest | Main Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .app-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .app-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.2);
+        }
+
+        /* --- THEMES --- */
+
+        .app-card.purple-theme:hover {
+            border-color: rgba(168, 85, 247, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(168, 85, 247, 0.2);
+        }
+
+        .app-card.indigo-theme:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.2);
+        }
+
+        .app-card.emerald-theme:hover {
+            border-color: rgba(16, 185, 129, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.2);
+        }
+
+        .app-card.orange-theme:hover {
+            border-color: rgba(249, 115, 22, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(249, 115, 22, 0.2);
+        }
+
+        .app-card.red-theme:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(239, 68, 68, 0.2);
+        }
+
+        /* New Cyan Theme for AI Trainer */
+        .app-card.cyan-theme:hover {
+            border-color: rgba(6, 182, 212, 0.5); /* cyan-500 */
+            box-shadow: 0 20px 40px -10px rgba(6, 182, 212, 0.2);
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+
+        .cal-day {
+            aspect-ratio: 1;
+            border-radius: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #475569;
+            background: rgba(30, 41, 59, 0.5);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .cal-day:hover {
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .cal-day.active {
+            background: rgba(37, 99, 235, 1.0);
+            border: 1px solid #60a5fa;
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 2s infinite;
+        }
+
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .blur-lock {
+            filter: blur(8px);
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    
+</head>
+
+<body class="bg-[#020617] text-slate-200 min-h-screen p-4 lg:p-10 selection:bg-blue-500/30 overflow-hidden">
+
+    <div id="main-content" class="max-w-7xl mx-auto blur-lock transition-all duration-500">
+        <header class="flex flex-col md:flex-row justify-between items-end mb-10 border-b border-white/10 pb-8 gap-6">
+            <div>
+                <h1 class="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-2">QUANT<span
+                        class="text-blue-500">QUEST</span></h1>
+                <p class="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">Interview Prep Tool</p>
+            </div>
+
+            <div class="flex gap-8 text-right items-end">
+                <div class="flex flex-col items-end">
+                    <div id="user-display" class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Guest</div>
+                    <button onclick="handleLogout()"
+                        class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-slate-700 transition-colors">
+                        Log Out
+                    </button>
+                </div>
+
+                <div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Streak
+                    </div>
+                    <div id="hub-streak"
+                        class="text-2xl font-black text-white mono flex items-center justify-end gap-2">0 <span
+                            class="text-sm text-slate-600">DAYS</span></div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Total Active Days
+                    </div>
+                    <div id="hub-total-days" class="text-2xl font-black text-blue-500 mono">0</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+
+                <a href="src/quantquest_dashboard.html"
+                    class="app-card purple-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-purple-400 transition-colors">
+                        Question Bank</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Master interview brainteasers. Track progress
+                        across probability, calculus, and logic puzzles.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-purple-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Access Dashboard <span class="ml-2">→</span></div>
+                </a>
+
+                <a href="src/firm_assessments.html"
+                    class="app-card indigo-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-indigo-400 transition-colors">
+                        Company Tracks</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Targeted preparation modules. Simulate actual
+                        tests from Da Vinci, Mako, Maven & SIG.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-indigo-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Select Track <span class="ml-2">→</span></div>
+                </a>
+
+                <a href="src/math-lab.html"
+                    class="app-card bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="text-2xl font-black text-white">×</span></div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-blue-400 transition-colors">
+                        Execution Math</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">High-frequency mental arithmetic. Master
+                        rapid spread calculations and order sizing.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-blue-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Initialize Module <span class="ml-2">→</span></div>
+                </a>
+
+                <a href="src/sequence-lab.html"
+                    class="app-card red-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-red-400 transition-colors">Pattern
+                        Recognition</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Algorithmic logic training. Identify complex
+                        numerical series to predict anomalies.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-red-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Initialize Module <span class="ml-2">→</span></div>
+                </a>
+
+                <a href="src/zap-n-suite.html"
+                    class="app-card orange-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-orange-400 transition-colors">Zap-N
+                        Suite</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Full spectrum assessment battery. 9-game
+                        cognitive gauntlet testing risk & memory.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-orange-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Launch Simulation <span class="ml-2">→</span></div>
+                </a>
+
+                <a href="src/market-suite.html"
+                    class="app-card emerald-theme bg-slate-900/50 p-8 rounded-[2.5rem] cursor-pointer group relative overflow-hidden block text-decoration-none h-full">
+                    <div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-32 h-32 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div
+                        class="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-900/40 mb-6 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                                d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-black text-white mb-2 group-hover:text-emerald-400 transition-colors">
+                        Market Making</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed mb-6">Probability and EV training. Practice spread
+                        setting and risk management simulations.</p>
+                    <div
+                        class="flex items-center text-xs font-bold text-emerald-500 uppercase tracking-widest group-hover:translate-x-2 transition-transform">
+                        Open Desk <span class="ml-2">→</span></div>
+                </a>
+
+            </div>
+
+            <div class="lg:col-span-4 space-y-6">
+                <div class="bg-slate-900 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl">
+                    <div class="flex justify-between items-center mb-6 px-2">
+                        <h3 class="text-sm font-black text-white uppercase tracking-widest">Consistency Log</h3>
+                        <div
+                            class="flex items-center gap-3 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700/50">
+                            <span id="current-month"
+                                class="text-xs font-bold text-blue-500 uppercase w-20 text-center select-none"></span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 mb-4 text-center text-[10px] font-bold text-slate-600">
+                        <div>S</div>
+                        <div>M</div>
+                        <div>T</div>
+                        <div>W</div>
+                        <div>T</div>
+                        <div>F</div>
+                        <div>S</div>
+                    </div>
+                    <div id="calendar-grid" class="cal-grid mb-6"></div>
+
+                    <button id="btn-checkin" onclick="handleCheckIn()"
+                        class="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest text-xs transition-all shadow-lg shadow-blue-900/30 animate-pulse-glow">
+                        <span id="checkin-text">Daily Check-In</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-lg modal-enter hidden">
+        <div
+            class="bg-slate-900 border border-slate-700 p-8 rounded-[2rem] shadow-2xl w-full max-w-md mx-4 relative overflow-hidden">
+            <div
+                class="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 blur-[50px] -translate-y-1/2 translate-x-1/2 rounded-full pointer-events-none">
+            </div>
+
+            <h2 id="modal-title" class="text-2xl font-black text-white mb-2">Log In</h2>
+            <p id="modal-subtitle" class="text-slate-400 text-sm mb-6">Enter your credentials to access QuantQuest.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Email</label>
+                    <input type="email" id="auth-email"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                        placeholder="quant@example.com">
+                </div>
+                <div>
+                    <label
+                        class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Password</label>
+                    <input type="password" id="auth-password"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                        placeholder="••••••••">
+                </div>
+
+                <button id="btn-submit-auth" onclick="submitAuth()"
+                    class="w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-xs uppercase tracking-widest hover:bg-blue-500 transition-colors shadow-lg shadow-blue-900/30 mt-2">
+                    Log In
+                </button>
+
+                <div class="text-center pt-2">
+                    <button id="toggle-auth-mode" onclick="toggleAuthMode()"
+                        class="text-slate-500 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors mt-4">
+                        Need an account? Sign Up
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notif-modal"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-transparent pointer-events-none hidden modal-enter">
+        <div
+            class="bg-slate-900 border border-slate-700 p-6 rounded-[2rem] shadow-2xl w-full max-w-sm mx-4 text-center relative overflow-hidden pointer-events-auto">
+            <div id="notif-glow"
+                class="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 blur-[40px] rounded-full pointer-events-none">
+            </div>
+
+            <div id="notif-icon-container" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            </div>
+
+            <h3 id="notif-title" class="text-xl font-black text-white mb-2"></h3>
+            <p id="notif-message" class="text-slate-400 text-sm mb-6"></p>
+
+            <button onclick="closeNotification()"
+                class="w-full py-3 rounded-xl bg-slate-800 text-white font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-colors border border-slate-700">
+                Okay
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const SUPABASE_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+
+        let supabaseClient;
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (err) {
+            console.error("Failed to initialize Supabase:", err);
+            showNotification("System Error", "Failed to load database. Check your connection.", "error");
+        }
+
+        const ACTIVITY_KEY = "quantquest_activity_log";
+        let currentUser = null;
+        let activityData = {};
+        let isSignUpMode = false;
+
+        // --- 2. NOTIFICATION SYSTEM ---
+        function showNotification(title, message, type = 'info') {
+            const modal = document.getElementById('notif-modal');
+            const glow = document.getElementById('notif-glow');
+            const iconContainer = document.getElementById('notif-icon-container');
+            const titleEl = document.getElementById('notif-title');
+            const msgEl = document.getElementById('notif-message');
+
+            titleEl.innerText = title;
+            msgEl.innerText = message;
+
+            if (type === 'error') {
+                glow.className = "absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 bg-red-500/20 blur-[40px] rounded-full pointer-events-none";
+                iconContainer.className = "w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-400";
+                iconContainer.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            } else {
+                // Success/Info
+                glow.className = "absolute top-0 left-1/2 -translate-x-1/2 w-24 h-24 bg-green-500/20 blur-[40px] rounded-full pointer-events-none";
+                iconContainer.className = "w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-green-400";
+                iconContainer.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeNotification() {
+            document.getElementById('notif-modal').classList.add('hidden');
+        }
+
+        // --- 3. INITIALIZATION ---
+
+        async function initApp() {
+            if (!supabaseClient) return;
+
+            // Check session
+            const { data: { session } } = await supabaseClient.auth.getSession();
+
+            if (session) {
+                handleLoginSuccess(session.user);
+            } else {
+                showLockScreen();
+            }
+
+            // Listen for auth changes
+            supabaseClient.auth.onAuthStateChange((_event, session) => {
+                if (session) {
+                    handleLoginSuccess(session.user);
+                } else {
+                    showLockScreen();
+                }
+            });
+
+            // Enter key support
+            document.getElementById('auth-password').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') submitAuth();
+            });
+        }
+
+        function showLockScreen() {
+            // Blur main content
+            document.getElementById('main-content').classList.add('blur-lock');
+            document.body.style.overflow = 'hidden';
+            // Show Auth Modal
+            document.getElementById('auth-modal').classList.remove('hidden');
+
+            currentUser = null;
+        }
+
+        function handleLoginSuccess(user) {
+            // Unblur
+            document.getElementById('main-content').classList.remove('blur-lock');
+            document.body.style.overflow = 'auto';
+            // Hide Modal
+            document.getElementById('auth-modal').classList.add('hidden');
+
+            currentUser = user;
+            document.getElementById('user-display').innerText = user.email;
+            loadCloudData();
+        }
+
+        async function handleLogout() {
+            try {
+                // 1. Try to tell Supabase we are leaving
+                await supabaseClient.auth.signOut();
+
+                // 2. Clear any local storage leftovers just in case
+                localStorage.removeItem('sb-mpxayhidmnzykuibpfin-auth-token');
+            } catch (err) {
+                console.error("Logout error:", err);
+            } finally {
+                // 3. FORCE RELOAD (This runs even if Supabase errors out)
+                window.location.reload();
+            }
+        }
+
+        // --- 4. AUTH FORM LOGIC ---
+
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            const title = document.getElementById('modal-title');
+            const sub = document.getElementById('modal-subtitle');
+            const btn = document.getElementById('btn-submit-auth');
+            const toggle = document.getElementById('toggle-auth-mode');
+
+            if (isSignUpMode) {
+                title.innerText = "Create Account";
+                sub.innerText = "Join QuantQuest to track your progress.";
+                btn.innerText = "Sign Up";
+                toggle.innerText = "Already have an account? Log In";
+            } else {
+                title.innerText = "Log In";
+                sub.innerText = "Enter your credentials to access QuantQuest.";
+                btn.innerText = "Log In";
+                toggle.innerText = "Need an account? Sign Up";
+            }
+        }
+
+        async function submitAuth() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            const btn = document.getElementById('btn-submit-auth');
+
+            if (!email || !password) {
+                showNotification("Missing Info", "Please enter both email and password.", "error");
+                return;
+            }
+
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            let error;
+
+            if (isSignUpMode) {
+                // SIGN UP
+                const response = await supabaseClient.auth.signUp({ email, password });
+                error = response.error;
+                if (!error && !response.data.session) {
+                    showNotification("Account Created", "Please check your email to confirm your account.", "success");
+                    toggleAuthMode();
+                } else if (!error && response.data.session) {
+                    showNotification("Welcome!", "Account created successfully.", "success");
+                }
+            } else {
+                // SIGN IN
+                const response = await supabaseClient.auth.signInWithPassword({ email, password });
+                error = response.error;
+            }
+
+            btn.disabled = false;
+            btn.innerText = isSignUpMode ? "Sign Up" : "Log In";
+
+            if (error) {
+                showNotification("Authentication Failed", error.message, "error");
+            }
+        }
+
+        // --- 5. DATA LOGIC ---
+
+        const getTodayString = () => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        async function loadCloudData() {
+            if (!currentUser) return;
+
+            const { data, error } = await supabaseClient
+                .from('activity_logs')
+                .select('checkin_date')
+                .eq('user_id', currentUser.id);
+
+            if (error) console.error(error);
+
+            activityData = {};
+            if (data) data.forEach(row => { activityData[row.checkin_date] = true; });
+            renderUI();
+        }
+
+        async function handleCheckIn() {
+            const today = getTodayString();
+            if (activityData[today]) return;
+
+            // Optimistic Update
+            activityData[today] = true;
+            renderUI();
+
+            if (currentUser) {
+                const { error } = await supabaseClient
+                    .from('activity_logs')
+                    .insert({ user_id: currentUser.id, checkin_date: today });
+                if (error) {
+                    showNotification("Sync Error", error.message, "error");
+                    // Rollback if failed
+                    delete activityData[today];
+                    renderUI();
+                }
+            }
+        }
+
+        // --- 6. RENDER UI ---
+        let viewDate = new Date();
+
+        function renderUI() {
+            renderCalendar();
+            updateStats();
+            updateCheckInButton();
+        }
+
+        function renderCalendar() {
+            const calGrid = document.getElementById('calendar-grid');
+            if (!calGrid) return;
+            calGrid.innerHTML = '';
+
+            const month = viewDate.getMonth();
+            const year = viewDate.getFullYear();
+            const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            document.getElementById('current-month').innerText = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) calGrid.appendChild(document.createElement('div'));
+
+            for (let i = 1; i <= lastDay; i++) {
+                const dayEl = document.createElement('div');
+                dayEl.classList.add('cal-day');
+                dayEl.innerText = i;
+
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                if (activityData[dateKey]) {
+                    dayEl.classList.add('active');
+                }
+                calGrid.appendChild(dayEl);
+            }
+        }
+
+        function updateCheckInButton() {
+            const today = getTodayString();
+            const btn = document.getElementById('btn-checkin');
+            const txt = document.getElementById('checkin-text');
+
+            if (!btn) return;
+
+            if (activityData[today]) {
+                btn.classList.remove('bg-blue-600', 'hover:bg-blue-500', 'animate-pulse-glow');
+                btn.classList.add('bg-green-500', 'cursor-default');
+                btn.disabled = true;
+                txt.innerText = "Completed";
+                btn.onclick = null;
+            } else {
+                btn.classList.add('bg-blue-600', 'hover:bg-blue-500', 'animate-pulse-glow');
+                btn.classList.remove('bg-green-500', 'cursor-default');
+                btn.disabled = false;
+                txt.innerText = "Daily Check-In";
+                btn.onclick = handleCheckIn;
+            }
+        }
+
+        function updateStats() {
+            const dates = Object.keys(activityData).sort();
+            document.getElementById('hub-total-days').innerText = dates.length;
+
+            let streak = 0;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let i = 0; i < 365; i++) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                if (activityData[key]) streak++;
+                else if (i === 0) continue;
+                else break;
+            }
+            document.getElementById('hub-streak').innerHTML = `${streak} <span class="text-sm text-slate-600">DAYS</span>`;
+        }
+
+        initApp();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+
+</html>

@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindForge | Sequence Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .glass-card { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .segment-group { display: flex; background: #1e293b; border-radius: 0.5rem; padding: 4px; gap: 4px; }
+        .segment-opt { flex: 1; text-align: center; padding: 6px; font-size: 0.75rem; font-weight: 700; color: #64748b; cursor: pointer; border-radius: 0.3rem; transition: all 0.2s; }
+        .segment-opt.active { background: #3b82f6; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .segment-opt.active-red { background: #ef4444; color: white; }
+
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #ef4444; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="bg-[#020617] text-slate-200 min-h-screen p-4 lg:p-10 selection:bg-red-500/30">
+
+    <div id="auth-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#020617] text-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500 mb-4"></div>
+        <h2 class="text-xl font-bold tracking-widest uppercase">Syncing Patterns...</h2>
+        <p id="auth-error" class="text-red-500 text-xs mt-4 hidden">Authentication failed.</p>
+    </div>
+
+    <div id="app" class="max-w-7xl mx-auto animate-in fade-in duration-500 hidden">
+        
+        <div class="mb-8 flex items-center justify-between">
+            <a href="../index.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Back to Hub
+            </a>
+            <div class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Module: Sequence Lab</div>
+        </div>
+
+        <div id="dashboard-view" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-red-900/40">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16m-7 6h7"/></svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-extrabold text-white tracking-tight">SEQUENCE LAB</h1>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Universal Pattern Pool</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-slate-900/40 p-5 rounded-2xl border border-white/5 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="block text-xs font-bold text-slate-300">Number Patterns</span>
+                                    <span class="text-[10px] text-slate-500">Math, Primes, Fib, Mixed Ops</span>
+                                </div>
+                                <input type="checkbox" id="type-num" checked onchange="saveConfig()" class="w-10 h-5 rounded-full bg-slate-800 text-red-500 focus:ring-0 appearance-none border border-slate-700 checked:bg-red-600 checked:border-red-600 transition-all cursor-pointer relative after:content-[''] after:w-3 after:h-3 after:bg-white after:rounded-full after:absolute after:top-1 after:left-1 checked:after:left-6 after:transition-all">
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="block text-xs font-bold text-slate-300">Letter Patterns</span>
+                                    <span class="text-[10px] text-slate-500">Alpha, Reverse, Real-World</span>
+                                </div>
+                                <input type="checkbox" id="type-let" checked onchange="saveConfig()" class="w-10 h-5 rounded-full bg-slate-800 text-red-500 focus:ring-0 appearance-none border border-slate-700 checked:bg-red-600 checked:border-red-600 transition-all cursor-pointer relative after:content-[''] after:w-3 after:h-3 after:bg-white after:rounded-full after:absolute after:top-1 after:left-1 checked:after:left-6 after:transition-all">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
+                            
+                            <div id="dur-container" class="transition-opacity">
+                                <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                    <span>Duration</span>
+                                    <span id="dur-label" class="text-red-500">1m</span>
+                                </div>
+                                <input type="range" id="dur-slider" min="1" max="15" value="1" oninput="updateUI()" class="w-full">
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                    <span>Count</span>
+                                    <span id="count-label" class="text-red-500">20</span>
+                                </div>
+                                <input type="range" id="count-slider" min="5" max="50" step="5" value="20" oninput="updateUI()" class="w-full">
+                            </div>
+                        </div>
+
+                        <label class="flex items-center justify-between cursor-pointer bg-slate-900/40 p-4 rounded-2xl border border-white/5 hover:bg-slate-800/60 transition-colors">
+                            <span class="text-xs font-bold text-slate-300">No Time Limit</span>
+                            <input type="checkbox" id="infinite-toggle" onchange="saveConfig(); updateUI()" class="w-5 h-5 rounded border-slate-700 bg-slate-800 text-red-500 focus:ring-0">
+                        </label>
+
+                        <div class="h-px bg-slate-800"></div>
+
+                        <div>
+                            <div class="text-[10px] font-bold uppercase text-slate-500 mb-2">Input Mode</div>
+                            <div class="segment-group">
+                                <div onclick="setQType('open')" id="btn-open" class="segment-opt active">Type Answer</div>
+                                <div onclick="setQType('multi')" id="btn-multi" class="segment-opt">Multiple Choice</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full mt-8 bg-red-600 hover:bg-red-500 text-white py-5 rounded-2xl font-black text-lg transition-all shadow-lg shadow-red-900/20">
+                        START TRAINING
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-3xl">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Highest Accuracy</span>
+                        <div id="best-acc" class="text-4xl font-black text-white italic">0%</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Total Attempts</span>
+                        <div id="total-runs" class="text-4xl font-black text-white italic">0</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col h-72">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Accuracy Trend</h2>
+                        <div class="text-[10px] text-green-500 font-bold uppercase flex items-center gap-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> Cloud Sync
+                        </div>
+                    </div>
+                    <div class="relative flex-1 w-full">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-end px-4">
+                        <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Recent Sessions</h3>
+                        <button onclick="clearData()" class="text-[10px] text-red-500 font-bold uppercase hover:underline">Reset Local</button>
+                    </div>
+                    <div id="session-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto scrollbar-hide pr-1">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-view" class="hidden fixed inset-0 bg-[#020617] z-50 flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-4xl relative">
+                <div class="flex justify-between items-end mb-12 text-slate-500 font-bold uppercase tracking-widest text-xs">
+                    <div>Q: <span id="q-current" class="text-white text-xl">1</span> / <span id="q-total">20</span></div>
+                    <div id="timer-display" class="text-white text-xl mono">00:00</div>
+                </div>
+
+                <div id="sequence-display" class="text-center text-5xl md:text-7xl font-black text-white mb-16 tracking-tight leading-snug break-words">
+                    2, 4, 6, 8, <span class="text-red-500">?</span>
+                </div>
+                
+                <div id="input-open" class="hidden max-w-xs mx-auto">
+                    <input type="text" id="user-input" class="w-full bg-transparent border-b-4 border-slate-700 text-center text-5xl text-white font-bold outline-none focus:border-red-500 py-4 mb-4 uppercase" placeholder="?" autocomplete="off">
+                    <div class="text-center text-xs text-slate-500 uppercase font-bold">Press Enter</div>
+                </div>
+
+                <div id="input-multi" class="hidden grid grid-cols-2 gap-4 max-w-2xl mx-auto"></div>
+
+                <div class="flex justify-center gap-4 mt-12">
+                    <button onclick="skipQuestion()" class="bg-slate-800 hover:bg-slate-700 text-yellow-500 px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors">Skip</button>
+                    <button onclick="exitGame()" class="bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-500 px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors">Exit</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="review-view" class="hidden fixed inset-0 bg-[#020617] z-50 flex flex-col items-center justify-center p-4">
+            <div class="glass-card p-8 rounded-[2.5rem] w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl border border-slate-700/50">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-3xl font-black text-white uppercase">Match Review</h2>
+                        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mt-1">Accuracy: <span id="review-acc" class="text-white">0%</span></p>
+                    </div>
+                    <button onclick="closeReview()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-xl font-bold uppercase tracking-widest text-xs transition-colors">Dashboard</button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto pr-2 space-y-3" id="review-list">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 1. CONFIG & AUTH ---
+        const SUPABASE_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        let supabaseClient;
+        let currentUser = null;
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (err) {
+            console.error("Supabase failed:", err);
+            document.getElementById('auth-error').innerText = "System Error: " + err.message;
+            document.getElementById('auth-error').classList.remove('hidden');
+        }
+
+        // --- 2. STARTUP LOGIC ---
+        async function initApp() {
+            if(!supabaseClient) return;
+            try {
+                // Check Login
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                
+                if (!session) {
+                    window.location.href = "../index.html"; 
+                } else {
+                    currentUser = session.user;
+                    
+                    // Load Config
+                    const savedConfig = JSON.parse(localStorage.getItem('seq_config_v3'));
+                    if(savedConfig) config = savedConfig;
+                    if(savedConfig && savedConfig.let === undefined) config.let = true;
+                    syncUI();
+
+                    // FETCH HISTORY FROM CLOUD
+                    await loadCloudHistory();
+                    
+                    // Show App
+                    document.getElementById('auth-loading').classList.add('hidden');
+                    document.getElementById('app').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Init failed:", err);
+            }
+        }
+
+        // --- 3. CLOUD SYNC ---
+        async function loadCloudHistory() {
+            if(!currentUser) return;
+            
+            // Fetch past scores from Supabase
+            const { data, error } = await supabaseClient
+                .from('game_scores')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .eq('game_type', 'sequence-lab')
+                .order('played_at', { ascending: true });
+
+            if (error) {
+                console.error("Error fetching history:", error);
+                return;
+            }
+
+            // Convert DB format to App format
+            // DB Score = Accuracy, DB Speed = Count
+            logs = data.map(row => ({
+                id: row.id,
+                date: new Date(row.played_at).toLocaleDateString(),
+                acc: row.score, 
+                count: Math.round(row.speed), // Using speed column for 'count'
+                history: [] // We don't save full history to DB currently to save space
+            }));
+
+            renderStats();
+        }
+
+        async function saveScoreToCloud(acc, count) {
+            if(!currentUser) return;
+            
+            const { error } = await supabaseClient.from('game_scores').insert({
+                user_id: currentUser.id,
+                game_type: 'sequence-lab',
+                score: acc,
+                speed: count, // Storing question count in speed column
+                played_at: new Date().toISOString()
+            });
+
+            if(error) console.error("Cloud Save Failed:", error.message);
+        }
+
+        // --- CONFIG ---
+        let config = { diff: 1, mix: false, num: true, let: true, dur: 1, count: 20, qType: 'open', opts: 4, infinite: false };
+        let session = { qIndex: 0, correct: 0, history: [], startTime: 0 };
+        let timerInt;
+        let logs = []; // Loaded from cloud
+        let chart;
+
+        // --- REAL WORLD DATA ---
+        const REAL_WORLD = {
+            planets: { seq: ['M','V','E','M','J','S','U','N'], name: 'Planets' },
+            music: { seq: ['D','R','M','F','S','L','T'], name: 'Solfa Notes' },
+            ordinals: { seq: ['F','S','T','F','F','S','S','E','N','T'], name: 'Ordinals' },
+            days: { seq: ['M','T','W','T','F','S','S'], name: 'Days' },
+            months: { seq: ['J','F','M','A','M','J','J','A','S','O','N','D'], name: 'Months' },
+            rainbow: { seq: ['R','O','Y','G','B','I','V'], name: 'Rainbow Colors' }
+        };
+
+        const numToChar = (n) => String.fromCharCode(64 + n);
+        const charToNum = (c) => c.toUpperCase().charCodeAt(0) - 64;
+
+        // --- GENERATOR ENGINE ---
+        function getSequence(useNum, useLet) {
+            let pool = [];
+            
+            if (useNum) {
+                pool.push('arithmetic', 'geometric', 'fibonacci', 'squares', 'cubes', 'triangular', 
+                          'powers2', 'powers3', 'primes', 'double_arithmetic', 'alternating_arithmetic', 
+                          'mixed_op', 'digit_sum', 'factorial', 'interwoven_num');
+            }
+            if (useLet) {
+                pool.push('alpha_linear', 'alpha_skip', 'alpha_reverse', 'interwoven_let', 'real_world');
+            }
+
+            if (pool.length === 0) pool = ['arithmetic']; 
+            const type = pool[Math.floor(Math.random() * pool.length)];
+            
+            let seq = [], ans = "", expl = "";
+
+            // --- NUMERIC LOGIC ---
+            if (type === 'arithmetic') {
+                const start = Math.floor(Math.random() * 20);
+                const step = Math.floor(Math.random() * 8) + 1;
+                for(let i=0; i<6; i++) seq.push(start + (i * step));
+                expl = `Add ${step} to previous term.`;
+            }
+            else if (type === 'double_arithmetic') {
+                let curr = Math.floor(Math.random() * 10);
+                for(let i=0; i<6; i++) { seq.push(curr); curr += (i+1); }
+                expl = `Difference increases by +1 each step (+1, +2, +3...).`;
+            }
+            else if (type === 'alternating_arithmetic') {
+                let curr = Math.floor(Math.random() * 20) + 10;
+                for(let i=0; i<6; i++) { 
+                    seq.push(curr); 
+                    curr += (i % 2 === 0) ? 3 : -1; 
+                }
+                expl = `Alternates between adding 3 and subtracting 1.`;
+            }
+            else if (type === 'geometric') {
+                const start = Math.floor(Math.random() * 4) + 1;
+                const factor = Math.floor(Math.random() * 2) + 2; 
+                for(let i=0; i<6; i++) seq.push(start * Math.pow(factor, i));
+                expl = `Multiply previous term by ${factor}.`;
+            }
+            else if (type === 'mixed_op') {
+                let curr = Math.floor(Math.random() * 3) + 1;
+                for(let i=0; i<6; i++) { seq.push(curr); curr = (curr * 2) + 1; }
+                expl = `Multiply by 2, then add 1.`;
+            }
+            else if (type === 'fibonacci') {
+                let a = 1, b = 1;
+                seq = [1, 1];
+                for(let i=0; i<4; i++) { let c = a+b; seq.push(c); a=b; b=c; }
+                expl = `Sum of the previous two numbers.`;
+            }
+            else if (type === 'squares') {
+                const s = Math.floor(Math.random() * 5) + 1;
+                for(let i=0; i<6; i++) seq.push((s+i)**2);
+                expl = `Consecutive square numbers (n²).`;
+            }
+            else if (type === 'cubes') {
+                const s = Math.floor(Math.random() * 3) + 1;
+                for(let i=0; i<6; i++) seq.push((s+i)**3);
+                expl = `Consecutive cube numbers (n³).`;
+            }
+            else if (type === 'triangular') {
+                for(let i=1; i<=6; i++) seq.push((i*(i+1))/2);
+                expl = `Triangular numbers (n * (n+1) / 2).`;
+            }
+            else if (type === 'powers2') {
+                for(let i=0; i<6; i++) seq.push(Math.pow(2, i+1));
+                expl = `Powers of 2 (2^n).`;
+            }
+            else if (type === 'powers3') {
+                for(let i=0; i<6; i++) seq.push(Math.pow(3, i));
+                expl = `Powers of 3 (3^n).`;
+            }
+            else if (type === 'primes') {
+                const p = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53];
+                const s = Math.floor(Math.random() * (p.length - 6));
+                seq = p.slice(s, s + 6);
+                expl = `Consecutive prime numbers.`;
+            }
+            else if (type === 'digit_sum') {
+                let curr = 11;
+                seq = [curr];
+                for(let i=0; i<5; i++) {
+                    let sum = curr.toString().split('').reduce((a,b)=>parseInt(a)+parseInt(b),0);
+                    curr += sum;
+                    seq.push(curr);
+                }
+                expl = `Add the sum of the digits to the number itself.`;
+            }
+            else if (type === 'factorial') {
+                let f = 1;
+                for(let i=1; i<=6; i++) { f *= i; seq.push(f); }
+                expl = `Factorials (n!).`;
+            }
+            else if (type === 'interwoven_num') {
+                let a = 5, b = 20;
+                for(let i=0; i<3; i++) {
+                    seq.push(a); seq.push(b);
+                    a+=2; b+=3;
+                }
+                expl = `Two sequences: 1st adds 2, 2nd adds 3.`;
+            }
+
+            // --- LETTER LOGIC ---
+            else if (type === 'alpha_linear') {
+                const s = Math.floor(Math.random() * 10) + 1;
+                const st = Math.floor(Math.random() * 3) + 1;
+                for(let i=0; i<6; i++) seq.push(numToChar(((s + (i*st) - 1) % 26) + 1));
+                expl = `Alphabetical order stepping by ${st}.`;
+            }
+            else if (type === 'alpha_reverse') {
+                const s = 26 - Math.floor(Math.random() * 5);
+                for(let i=0; i<6; i++) seq.push(numToChar(s - i));
+                expl = `Alphabet backwards (-1 step).`;
+            }
+            else if (type === 'alpha_skip') {
+                let curr = 1, skip = 2;
+                for(let i=0; i<6; i++) {
+                    seq.push(numToChar(((curr-1)%26)+1));
+                    curr += skip; skip++;
+                }
+                expl = `Skip increases by 1 each time (A, C, F...).`;
+            }
+            else if (type === 'interwoven_let') {
+                for(let i=0; i<3; i++) {
+                    seq.push(numToChar(1+i)); 
+                    seq.push(numToChar(26-i));
+                }
+                expl = `1st term goes A->Z, 2nd term goes Z->A.`;
+            }
+            else if (type === 'real_world') {
+                const keys = Object.keys(REAL_WORLD);
+                const k = keys[Math.floor(Math.random() * keys.length)];
+                const data = REAL_WORLD[k];
+                const s = Math.floor(Math.random() * (data.seq.length - 5)); 
+                if(data.seq.length < 6) seq = data.seq; 
+                else seq = data.seq.slice(s, s + 6);
+                expl = `Sequence based on ${data.name}.`;
+            }
+
+            ans = seq.pop().toString();
+            return { display: seq.join(', '), answer: ans, explanation: expl };
+        }
+
+        // --- UI HANDLERS ---
+        function updateUI() {
+            document.getElementById('dur-label').innerText = document.getElementById('dur-slider').value + ' m';
+            const countVal = document.getElementById('count-slider').value;
+            document.getElementById('count-label').innerText = countVal == 50 ? '∞' : countVal;
+            
+            const isInfinite = document.getElementById('infinite-toggle').checked;
+            const durCont = document.getElementById('dur-container');
+            if(isInfinite) durCont.classList.add('opacity-50', 'pointer-events-none');
+            else durCont.classList.remove('opacity-50', 'pointer-events-none');
+
+            saveConfigFromUI();
+        }
+
+        function saveConfigFromUI() {
+            config.num = document.getElementById('type-num').checked;
+            config.let = document.getElementById('type-let').checked;
+            config.dur = parseInt(document.getElementById('dur-slider').value);
+            config.count = parseInt(document.getElementById('count-slider').value);
+            config.infinite = document.getElementById('infinite-toggle').checked;
+            localStorage.setItem('seq_config_v3', JSON.stringify(config));
+        }
+
+        function syncUI() {
+            document.getElementById('type-num').checked = config.num;
+            document.getElementById('type-let').checked = config.let;
+            document.getElementById('dur-slider').value = config.dur;
+            document.getElementById('count-slider').value = config.count;
+            document.getElementById('infinite-toggle').checked = config.infinite;
+            setQType(config.qType);
+            updateUI();
+        }
+
+        function setQType(type) {
+            config.qType = type;
+            document.getElementById('btn-open').className = `segment-opt ${type === 'open' ? 'active' : ''}`;
+            document.getElementById('btn-multi').className = `segment-opt ${type === 'multi' ? 'active' : ''}`;
+            saveConfigFromUI();
+        }
+
+        let currentSeqObj = {};
+        let gameTime = 0;
+
+        function startGame() {
+            if(!config.num && !config.let) return alert("Select at least one sequence type.");
+            session = { qIndex: 0, correct: 0, history: [], startTime: Date.now() };
+            
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('review-view').classList.add('hidden');
+            document.getElementById('game-view').classList.remove('hidden');
+            document.getElementById('q-total').innerText = config.count == 50 ? '∞' : config.count;
+            
+            if(config.infinite) {
+                gameTime = 0;
+                updateTimerDisplay(0);
+                timerInt = setInterval(() => {
+                    gameTime++;
+                    updateTimerDisplay(gameTime);
+                }, 1000);
+            } else {
+                let timeLeft = config.dur * 60;
+                updateTimerDisplay(timeLeft);
+                timerInt = setInterval(() => {
+                    timeLeft--;
+                    updateTimerDisplay(timeLeft);
+                    if(timeLeft <= 0) endGame();
+                }, 1000);
+            }
+
+            nextQuestion();
+        }
+
+        function updateTimerDisplay(s) {
+            const m = Math.floor(s / 60).toString().padStart(2, '0');
+            const sec = (s % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${sec}`;
+        }
+
+        function nextQuestion() {
+            session.qIndex++;
+            if(config.count != 50 && session.qIndex > config.count) return endGame();
+            document.getElementById('q-current').innerText = session.qIndex;
+            document.getElementById('user-input').value = '';
+            document.getElementById('user-input').focus();
+
+            currentSeqObj = getSequence(config.num, config.let);
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            document.getElementById('sequence-display').innerHTML = currentSeqObj.display + ', <span class="text-red-500">?</span>';
+
+            if(config.qType === 'open') {
+                document.getElementById('input-open').classList.remove('hidden');
+                document.getElementById('input-multi').classList.add('hidden');
+            } else {
+                document.getElementById('input-open').classList.add('hidden');
+                const multi = document.getElementById('input-multi');
+                multi.classList.remove('hidden');
+                
+                let opts = [currentSeqObj.answer];
+                const isNum = !isNaN(currentSeqObj.answer);
+                
+                while(opts.length < config.opts) {
+                    let fake;
+                    if(isNum) {
+                        let r = parseInt(currentSeqObj.answer) + Math.floor(Math.random() * 20) - 10;
+                        fake = r.toString();
+                    } else {
+                        let charCode = currentSeqObj.answer.charCodeAt(0) + Math.floor(Math.random() * 5) - 2;
+                        fake = String.fromCharCode(charCode);
+                    }
+                    if(fake != currentSeqObj.answer && !opts.includes(fake)) opts.push(fake);
+                }
+                opts.sort(() => Math.random() - 0.5);
+
+                multi.innerHTML = opts.map(o => `
+                    <button onclick="submitAnswer('${o}')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl text-xl transition-all border-b-4 border-slate-900 active:border-b-0 active:translate-y-1">${o}</button>
+                `).join('');
+            }
+        }
+
+        document.getElementById('user-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') submitAnswer(this.value);
+        });
+
+        function skipQuestion() {
+            recordHistory("Skipped", false);
+            nextQuestion();
+        }
+
+        function submitAnswer(val) {
+            const isCorrect = val.toString().toUpperCase() === currentSeqObj.answer.toString().toUpperCase();
+            if(isCorrect) session.correct++;
+            recordHistory(val, isCorrect);
+            nextQuestion();
+        }
+
+        function recordHistory(userAns, isCorrect) {
+            session.history.push({
+                seq: currentSeqObj.display,
+                user: userAns,
+                answer: currentSeqObj.answer,
+                correct: isCorrect,
+                explanation: currentSeqObj.explanation
+            });
+        }
+
+        function endGame() {
+            clearInterval(timerInt);
+            // Calculate accuracy
+            const acc = session.qIndex > 1 ? Math.round((session.correct / (session.qIndex - 1)) * 100) : 0;
+            const newLog = { 
+                id: Date.now(),
+                date: new Date().toLocaleDateString(), 
+                acc: acc, 
+                count: session.qIndex - 1,
+                history: session.history 
+            };
+            
+            // Add to local display immediately
+            logs.push(newLog);
+            
+            // Save to Cloud
+            saveScoreToCloud(acc, session.qIndex - 1);
+            
+            // Show Review
+            showReview(newLog);
+        }
+
+        function showReview(logData) {
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('review-view').classList.remove('hidden');
+            
+            document.getElementById('review-acc').innerText = logData.acc + '%';
+
+            const list = document.getElementById('review-list');
+            list.innerHTML = logData.history.map((h, i) => `
+                <div class="bg-slate-900/50 p-4 rounded-xl border ${h.correct ? 'border-green-500/20' : 'border-red-500/20'}">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-xs font-bold text-slate-500 uppercase">Q${i+1}</span>
+                        <span class="text-xs font-bold ${h.correct ? 'text-green-500' : 'text-red-500'} uppercase">${h.correct ? 'Correct' : 'Incorrect'}</span>
+                    </div>
+                    <div class="text-xl font-bold text-white mb-2 tracking-wide">${h.seq}, <span class="text-blue-400">${h.answer}</span></div>
+                    <div class="flex justify-between items-center text-sm">
+                        <div class="text-slate-400">Your Answer: <span class="${h.correct ? 'text-green-400' : 'text-red-400'} font-mono font-bold">${h.user}</span></div>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-white/5 text-xs text-blue-300/80 font-mono">
+                        Logic: ${h.explanation}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function closeReview() {
+            location.reload();
+        }
+
+        function exitGame() {
+            clearInterval(timerInt);
+            location.reload();
+        }
+
+        function renderStats() {
+            if(logs.length === 0) return;
+            const maxAcc = Math.max(...logs.map(l => l.acc));
+            document.getElementById('best-acc').innerText = maxAcc + '%';
+            document.getElementById('total-runs').innerText = logs.length;
+
+            // Render Session List
+            const list = document.getElementById('session-list');
+            list.innerHTML = [...logs].reverse().map(l => `
+                <div class="glass-card p-4 rounded-2xl flex justify-between items-center transition-all group">
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">${l.date}</span>
+                        <span class="text-xl font-black text-white italic group-hover:text-blue-500 transition-colors">${l.acc}% <span class="text-[10px] text-slate-500 font-normal not-italic">ACC</span></span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Count</span>
+                        <span class="mono text-white">${l.count}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: logs.map((_,i) => i+1),
+                    datasets: [{ 
+                        label: 'Accuracy', 
+                        data: logs.map(l => l.acc), 
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        fill: true,
+                        tension: 0.4, 
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { display: false }, 
+                        y: { display: true, min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#ef4444' } } 
+                    }
+                }
+            });
+        }
+
+        function clearData() { 
+            if(confirm('Reset Local View?')) { 
+                localStorage.removeItem('seq_logs_v3'); 
+                location.reload(); 
+            } 
+        }
+
+        // Start Auth Logic
+        initApp();
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

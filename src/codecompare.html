@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Code Compare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Interactive Elements */
+        .option-btn { transition: all 0.1s ease-out; border-bottom: 4px solid rgba(255,255,255,0.1); }
+        .option-btn:hover { transform: translateY(-2px); border-color: rgba(249, 115, 22, 0.5); background-color: rgba(30, 41, 59, 0.9); }
+        .option-btn:active { transform: translateY(2px); border-bottom-width: 0px; }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #f97316; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+
+        /* Animation */
+        @keyframes flash-green { 0% { background-color: rgba(34, 197, 94, 0.2); } 100% { background-color: transparent; } }
+        @keyframes flash-red { 0% { background-color: rgba(239, 68, 68, 0.2); } 100% { background-color: transparent; } }
+        .flash-success { animation: flash-green 0.3s ease-out; }
+        .flash-error { animation: flash-red 0.3s ease-out; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-orange-500/30 p-4 lg:p-10 flex flex-col">
+
+    <div id="app" class="max-w-7xl mx-auto w-full animate-in fade-in duration-500 flex-1 flex flex-col">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            
+            <div class="flex items-center gap-8">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time</div>
+                    <div class="text-xl font-black text-white mono" id="timer-display">00:00</div>
+                </div>
+                
+                <div class="h-8 w-px bg-white/10"></div>
+
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Speed</div>
+                    <div class="text-xl font-black text-orange-500 mono"><span id="cpm-display">0</span> CPM</div>
+                </div>
+
+                <div class="h-8 w-px bg-white/10"></div>
+
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Score</div>
+                    <div class="text-xl font-black text-white mono" id="score-display">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+            
+            <div class="lg:col-span-4 space-y-6">
+                
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-6 opacity-5">
+                        <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    </div>
+
+                    <h2 class="text-xl font-extrabold text-white tracking-tight mb-6">PROTOCOL SETUP</h2>
+
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                <span>String Length</span>
+                                <span id="label-len" class="text-orange-400">6 Chars</span>
+                            </div>
+                            <input type="range" id="input-len" min="4" max="12" step="1" value="6" oninput="updateSettingsUI()" class="w-full">
+                        </div>
+
+                        <div class="p-4 bg-slate-800/50 rounded-xl border border-white/5">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Strict Mode</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="input-strict" class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                                </label>
+                            </div>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Introduces ambiguous characters (0/O, 1/I, 8/B) to test precision.
+                            </p>
+                        </div>
+
+                        <button onclick="startGame()" id="btn-start" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-orange-900/20 transition-all active:scale-95">
+                            Initialize Session
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Accuracy Trend</h3>
+                    </div>
+                    <div class="h-32 w-full">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col">
+                <div id="game-stage" class="glass-card flex-1 rounded-[3rem] p-8 flex flex-col items-center justify-start border border-slate-700/50 transition-colors duration-200 min-h-[500px]">
+                    
+                    <div class="w-full text-center mt-8 mb-12">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-6">Identify Exact Match</div>
+                        <div id="target-display" class="inline-block bg-slate-900 px-8 py-6 rounded-2xl border border-white/10 text-4xl md:text-5xl font-black text-white tracking-widest mono shadow-2xl">
+                            READY
+                        </div>
+                    </div>
+
+                    <div id="options-grid" class="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-4 pb-8">
+                        <div class="col-span-1 md:col-span-2 text-center text-slate-600 font-mono text-sm">
+                            Press 'Initialize Session' to begin
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG & STATE ---
+        const AMBIGUOUS_SET = ['0', 'O', '1', 'I', 'l', '8', 'B', '5', 'S', '2', 'Z'];
+        const STANDARD_SET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+        
+        let config = { length: 6, strict: false };
+        let session = { active: false, score: 0, attempts: 0, startTime: 0, timerInt: null };
+        let currentTarget = "";
+        let chart;
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", () => {
+            updateSettingsUI();
+            initChart();
+        });
+
+        function updateSettingsUI() {
+            config.length = parseInt(document.getElementById('input-len').value);
+            document.getElementById('label-len').innerText = `${config.length} Chars`;
+        }
+
+        // --- GAME LOGIC ---
+        function startGame() {
+            // Apply Settings
+            config.length = parseInt(document.getElementById('input-len').value);
+            config.strict = document.getElementById('input-strict').checked;
+
+            // Reset Session
+            session = { active: true, score: 0, attempts: 0, startTime: Date.now(), timerInt: null };
+            document.getElementById('score-display').innerText = "0";
+            document.getElementById('cpm-display').innerText = "0";
+            document.getElementById('timer-display').innerText = "00:00";
+            document.getElementById('btn-start').innerText = "Restart Session";
+            
+            resetChart();
+
+            // Start Timer
+            if(session.timerInt) clearInterval(session.timerInt);
+            session.timerInt = setInterval(() => {
+                const elapsed = (Date.now() - session.startTime) / 1000;
+                const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const s = Math.floor(elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('timer-display').innerText = `${m}:${s}`;
+                
+                // Calc CPM (Corrects Per Minute)
+                const cpm = Math.round((session.score / (elapsed || 1)) * 60);
+                document.getElementById('cpm-display').innerText = cpm;
+            }, 1000);
+
+            nextRound();
+        }
+
+        function generateString(len, strict) {
+            let result = '';
+            const charSet = strict ? STANDARD_SET + AMBIGUOUS_SET.join('') : STANDARD_SET;
+            for (let i = 0; i < len; i++) {
+                result += charSet.charAt(Math.floor(Math.random() * charSet.length));
+            }
+            return result;
+        }
+
+        function mutateString(str, strict) {
+            let arr = str.split('');
+            const idx = Math.floor(Math.random() * arr.length);
+            const char = arr[idx];
+            
+            // 1. Try lookalike swap if in strict mode
+            if(strict) {
+                const lookalikes = {
+                    '0': 'O', 'O': '0', '1': 'I', 'I': '1', 'l': '1', 
+                    '8': 'B', 'B': '8', '5': 'S', 'S': '5', '2': 'Z', 'Z': '2'
+                };
+                if(lookalikes[char] && Math.random() > 0.3) {
+                    arr[idx] = lookalikes[char];
+                    return arr.join('');
+                }
+            }
+            
+            // 2. Fallback to random char swap
+            const charSet = strict ? STANDARD_SET + AMBIGUOUS_SET.join('') : STANDARD_SET;
+            let newChar = char;
+            let safety = 0;
+            while(newChar === char && safety < 50) {
+                newChar = charSet.charAt(Math.floor(Math.random() * charSet.length));
+                safety++;
+            }
+            // Fallback if safety triggered (rare)
+            if (newChar === char) newChar = (char === 'A') ? 'B' : 'A';
+            
+            arr[idx] = newChar;
+            return arr.join('');
+        }
+
+        function nextRound() {
+            // 1. Generate Target
+            currentTarget = generateString(config.length, config.strict);
+            document.getElementById('target-display').innerText = currentTarget;
+
+            // 2. Generate Options
+            let options = [currentTarget];
+            let attempts = 0;
+            
+            while(options.length < 4 && attempts < 100) {
+                let fake = mutateString(currentTarget, config.strict);
+                if(!options.includes(fake)) {
+                    options.push(fake);
+                }
+                attempts++;
+            }
+            
+            // Safety fill if mutations failed (very rare)
+            while(options.length < 4) {
+                options.push(generateString(config.length, config.strict));
+            }
+            
+            // Shuffle
+            options.sort(() => Math.random() - 0.5);
+
+            // 3. Render
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = options.map(opt => `
+                <button onclick="handleGuess('${opt}')" class="option-btn w-full bg-slate-800 text-white font-mono text-xl py-6 rounded-xl border border-white/10 shadow-lg tracking-widest relative overflow-hidden group">
+                    <span class="relative z-10">${opt}</span>
+                    <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+            `).join('');
+        }
+
+        function handleGuess(val) {
+            if(!session.active) return;
+            session.attempts++;
+            
+            const stage = document.getElementById('game-stage');
+            const isCorrect = val === currentTarget;
+
+            if(isCorrect) {
+                session.score++;
+                document.getElementById('score-display').innerText = session.score;
+                stage.classList.add('flash-success');
+                setTimeout(() => stage.classList.remove('flash-success'), 200);
+            } else {
+                session.score = Math.max(0, session.score - 1); 
+                document.getElementById('score-display').innerText = session.score;
+                stage.classList.add('flash-error');
+                setTimeout(() => stage.classList.remove('flash-error'), 200);
+            }
+
+            updateChart(isCorrect);
+            nextRound();
+        }
+
+        // --- CHART ---
+        function initChart() {
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: [],
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: 0, max: 100 }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        function resetChart() {
+            if(!chart) return;
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+            chart.update();
+        }
+
+        function updateChart(isCorrect) {
+            if(!chart) return;
+            const acc = Math.round((session.score / session.attempts) * 100);
+            chart.data.labels.push('');
+            chart.data.datasets[0].data.push(acc);
+            
+            if(chart.data.labels.length > 50) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+            chart.update();
+        }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

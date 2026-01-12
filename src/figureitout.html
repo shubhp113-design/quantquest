@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Figure It Out</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass UI */
+        .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-panel { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.05); }
+
+        /* Animations */
+        .flip-container { perspective: 1000px; }
+        .flipper { transition: 0.6s; transform-style: preserve-3d; position: relative; width: 100%; height: 100%; }
+        .front, .back { backface-visibility: hidden; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .front { z-index: 2; transform: rotateY(0deg); }
+        .back { transform: rotateY(180deg); }
+        .flipped { transform: rotateY(180deg); }
+
+        .prop-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .prop-btn.active { border-color: #ec4899; background: rgba(236, 72, 153, 0.1); transform: translateY(-2px); }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="overflow-hidden min-h-screen">
+
+    <svg style="position: absolute; width: 0; height: 0; overflow: hidden;">
+        <defs>
+            <pattern id="pat-stripe" patternUnits="userSpaceOnUse" width="10" height="10" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(255,255,255,0.3)" stroke-width="4" />
+            </pattern>
+            <pattern id="pat-dot" patternUnits="userSpaceOnUse" width="10" height="10">
+                <circle cx="5" cy="5" r="2" fill="rgba(255,255,255,0.3)" />
+            </pattern>
+            <pattern id="pat-grid" patternUnits="userSpaceOnUse" width="10" height="10">
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+            </pattern>
+        </defs>
+    </svg>
+
+    <div id="auth-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#020617] text-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500 mb-4"></div>
+        <h2 class="text-xl font-bold tracking-widest uppercase">Initializing Logic Engine...</h2>
+    </div>
+
+    <div id="app" class="hidden h-screen flex flex-col max-w-7xl mx-auto p-4 lg:p-6">
+        
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-4">
+                <a href="zap-n-suite.html" class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700 text-slate-400 hover:text-white">
+                    <i class="bi bi-arrow-left text-lg"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-black text-white italic">FIGURE<span class="text-pink-500">ITOUT</span></h1>
+                    <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Inductive Reasoning</div>
+                </div>
+            </div>
+            <div class="flex gap-6 items-center">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Possibilities</div>
+                    <div id="possibility-counter" class="text-xl text-green-400 font-black mono animate-pulse">Calculating...</div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Round</div>
+                    <div class="text-xl text-white font-black"><span id="round-current">1</span><span class="text-slate-600 text-sm"> / </span><span id="round-total" class="text-slate-600 text-sm">3</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-container" class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 h-full overflow-hidden relative">
+            
+            <div id="start-screen" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#020617]/95 backdrop-blur-md rounded-[2rem]">
+                <div class="glass-card p-10 rounded-[2.5rem] max-w-md w-full text-center border-t-4 border-t-pink-500">
+                    <div class="w-16 h-16 bg-pink-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-pink-400 border border-pink-500/30">
+                        <i class="bi bi-diagram-3 text-3xl"></i>
+                    </div>
+                    <h2 class="text-3xl font-black text-white mb-2">LOGIC ENGINE</h2>
+                    <p class="text-slate-400 text-sm mb-8 leading-relaxed">
+                        Guess the hidden figure. After every move, the engine analyzes your logic.
+                        <br><br>
+                        <span class="text-pink-400 font-bold">Goal:</span> Eliminate possibilities efficiently. Avoid guessing figures that are already logically impossible.
+                    </p>
+                    <button onclick="startGame()" class="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-pink-900/30 active:scale-95">
+                        Start Analysis
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+                <div class="glass-panel p-5 rounded-2xl">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">1. Shape</div>
+                    <div class="grid grid-cols-4 gap-2" id="sel-shape"></div>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">2. Color</div>
+                    <div class="grid grid-cols-4 gap-2" id="sel-color"></div>
+                </div>
+                <div id="group-pattern" class="glass-panel p-5 rounded-2xl hidden opacity-50">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">3. Pattern</div>
+                    <div class="grid grid-cols-4 gap-2" id="sel-pattern"></div>
+                </div>
+                <div id="group-border" class="glass-panel p-5 rounded-2xl hidden opacity-50">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">4. Border</div>
+                    <div class="grid grid-cols-4 gap-2" id="sel-border"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 flex flex-col">
+                <div class="flex-1 glass-card rounded-[2.5rem] p-6 flex flex-col items-center justify-center relative">
+                    
+                    <div class="absolute top-6 right-6">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1 text-center">Target</div>
+                        <div class="w-24 h-24 flip-container">
+                            <div id="target-card" class="flipper">
+                                <div class="front bg-slate-800 rounded-xl border-2 border-slate-700 flex items-center justify-center">
+                                    <i class="bi bi-question-lg text-4xl text-slate-600"></i>
+                                </div>
+                                <div class="back bg-slate-900 rounded-xl border-2 border-pink-500 flex items-center justify-center overflow-hidden" id="target-reveal">
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Construction</div>
+                    <div class="w-64 h-64 bg-slate-900/50 rounded-3xl border border-slate-700 flex items-center justify-center shadow-2xl relative overflow-hidden" id="user-preview">
+                        </div>
+
+                    <button onclick="submitGuess()" id="btn-submit" class="mt-8 px-12 py-4 bg-pink-600 hover:bg-pink-500 text-white font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-pink-900/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Check Match
+                    </button>
+                    <button onclick="showAnalysis()" id="btn-next" class="hidden mt-8 px-12 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-blue-900/30 active:scale-95">
+                        Analyze Round <i class="bi bi-clipboard-data ml-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 flex flex-col">
+                <div class="glass-card rounded-[2.5rem] p-6 h-full flex flex-col">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 border-b border-white/5 pb-4">Logic Stream</div>
+                    <div id="history-list" class="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                        <div class="text-center text-slate-600 text-xs italic mt-10">Awaiting input...</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="analysis-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/95 backdrop-blur-xl">
+        <div class="w-full max-w-4xl h-[80vh] flex flex-col glass-card rounded-[2.5rem] border border-slate-700 overflow-hidden shadow-2xl m-4">
+            <div class="p-8 border-b border-slate-700 bg-slate-900/50 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-black text-white">ROUND ANALYSIS</h2>
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Review your logic path</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase">Logic Score</div>
+                    <div id="logic-score" class="text-3xl font-black text-green-400">100%</div>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-8 space-y-4" id="analysis-content">
+                </div>
+
+            <div class="p-6 bg-slate-900/50 border-t border-slate-700 flex justify-end gap-4">
+                <button onclick="nextRound()" class="px-8 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold uppercase tracking-widest text-xs rounded-xl transition-colors">
+                    Next Round <i class="bi bi-arrow-right ml-1"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SETUP ---
+        const SUPABASE_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        let supabaseClient;
+        let currentUser = null;
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            checkAuth();
+        } catch (err) { console.error(err); }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) window.location.href = "../index.html";
+            else {
+                currentUser = session.user;
+                document.getElementById('auth-loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            }
+        }
+
+        // --- 2. GAME DATA ---
+        const PROPS = {
+            shapes: ['square', 'circle', 'triangle', 'diamond'],
+            colors: ['#ef4444', '#3b82f6', '#22c55e', '#eab308'],
+            patterns: ['none', 'stripe', 'dot', 'grid'],
+            borders: ['none', 'thin', 'thick', 'double']
+        };
+        const PROP_ICONS = {
+            square: 'bi-square-fill', circle: 'bi-circle-fill', triangle: 'bi-triangle-fill', diamond: 'bi-suit-diamond-fill',
+            '#ef4444': 'bg-red-500', '#3b82f6': 'bg-blue-500', '#22c55e': 'bg-green-500', '#eab308': 'bg-yellow-500',
+            none: 'bi-slash-circle', stripe: 'bi-slash-lg', dot: 'bi-grid-3x3', grid: 'bi-grid',
+            thin: 'bi-border-outer', thick: 'bi-border-width', double: 'bi-box'
+        };
+
+        // --- 3. LOGIC ENGINE ---
+        class LogicEngine {
+            constructor() {
+                this.candidates = [];
+                this.activeProps = [];
+            }
+
+            init(round) {
+                // Determine active properties
+                this.activeProps = ['shape', 'color'];
+                if(round > 1) this.activeProps.push('pattern');
+                if(round > 2) this.activeProps.push('border');
+
+                // Generate ALL possible combinations
+                this.candidates = [];
+                const shapes = PROPS.shapes;
+                const colors = PROPS.colors;
+                const patterns = round > 1 ? PROPS.patterns : ['none'];
+                const borders = round > 2 ? PROPS.borders : ['none'];
+
+                shapes.forEach(s => {
+                    colors.forEach(c => {
+                        patterns.forEach(p => {
+                            borders.forEach(b => {
+                                this.candidates.push({ shape: s, color: c, pattern: p, border: b });
+                            });
+                        });
+                    });
+                });
+            }
+
+            // Check if a guess is logically valid based on CURRENT candidates
+            isValidMove(guess) {
+                // A move is valid if it exists in the current pool of possibilities
+                return this.candidates.some(c => this.matches(c, guess));
+            }
+
+            // Compare two objects
+            matches(a, b) {
+                return a.shape === b.shape && a.color === b.color && a.pattern === b.pattern && a.border === b.border;
+            }
+
+            // Calculate match score (Standard Game Logic)
+            calcScore(guess, target) {
+                let score = 0;
+                if(guess.shape === target.shape) score++;
+                if(guess.color === target.color) score++;
+                if(this.activeProps.includes('pattern') && guess.pattern === target.pattern) score++;
+                if(this.activeProps.includes('border') && guess.border === target.border) score++;
+                return score;
+            }
+
+            // Prune candidates based on feedback
+            // "If the target WAS candidate C, would it yield score S against guess G?"
+            // If NO, remove C.
+            filter(guess, score) {
+                this.candidates = this.candidates.filter(c => {
+                    // Hypothetical score: If 'c' was the target, what score would 'guess' get?
+                    const hypotheticalScore = this.calcScore(guess, c);
+                    return hypotheticalScore === score;
+                });
+                return this.candidates.length;
+            }
+        }
+
+        let engine = new LogicEngine();
+        let state = {
+            round: 1, maxRounds: 3, totalMoves: 0, 
+            target: {}, current: { shape: 'square', color: '#ef4444', pattern: 'none', border: 'none' },
+            roundLog: [] // Stores detailed move data for analysis
+        };
+
+        // --- 4. GAMEPLAY ---
+        function startGame() {
+            state.round = 1;
+            document.getElementById('start-screen').classList.add('hidden');
+            initBuilder();
+            startRound();
+        }
+
+        function startRound() {
+            // UI Reset
+            document.getElementById('round-current').innerText = state.round;
+            document.getElementById('target-card').classList.remove('flipped');
+            document.getElementById('btn-submit').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+            document.getElementById('history-list').innerHTML = '';
+            
+            // Logic Init
+            engine.init(state.round);
+            updatePossibilitiesUI();
+            state.roundLog = [];
+
+            // UI Config
+            document.getElementById('group-pattern').className = state.round > 1 ? "glass-panel p-5 rounded-2xl" : "glass-panel p-5 rounded-2xl hidden opacity-50";
+            document.getElementById('group-border').className = state.round > 2 ? "glass-panel p-5 rounded-2xl" : "glass-panel p-5 rounded-2xl hidden opacity-50";
+
+            // Pick Target
+            const idx = Math.floor(Math.random() * engine.candidates.length);
+            state.target = { ...engine.candidates[idx] };
+
+            renderPreview('user-preview', state.current);
+            renderPreview('target-reveal', state.target, 80);
+        }
+
+        function submitGuess() {
+            const guess = { ...state.current };
+            const score = engine.calcScore(guess, state.target);
+            const totalProps = engine.activeProps.length;
+
+            // ANALYSIS: Was this a good move?
+            const isLogicallyValid = engine.isValidMove(guess);
+            const optionsBefore = engine.candidates.length;
+            
+            // Apply Logic Filter
+            engine.filter(guess, score);
+            const optionsAfter = engine.candidates.length;
+
+            // Store Log
+            state.roundLog.push({
+                guess: guess,
+                score: score,
+                valid: isLogicallyValid,
+                eliminated: optionsBefore - optionsAfter,
+                remaining: optionsAfter
+            });
+
+            // UI Update
+            updateHistoryUI(guess, score, totalProps);
+            updatePossibilitiesUI();
+
+            // Win?
+            if(score === totalProps) {
+                handleWin();
+            } else {
+                // Shake if bad logic
+                if(!isLogicallyValid) {
+                    const btn = document.getElementById('btn-submit');
+                    btn.classList.add('bg-red-600', 'shake');
+                    setTimeout(() => btn.classList.remove('bg-red-600', 'shake'), 300);
+                }
+            }
+        }
+
+        function handleWin() {
+            document.getElementById('target-card').classList.add('flipped');
+            document.getElementById('btn-submit').classList.add('hidden');
+            document.getElementById('btn-next').classList.remove('hidden');
+        }
+
+        function updatePossibilitiesUI() {
+            const count = engine.candidates.length;
+            const el = document.getElementById('possibility-counter');
+            el.innerText = count;
+            el.className = count === 1 ? "text-xl font-black mono text-green-400" : "text-xl font-black mono text-white";
+        }
+
+        function updateHistoryUI(guess, score, total) {
+            const item = document.createElement('div');
+            item.className = "bg-slate-800/50 p-3 rounded-xl flex items-center justify-between animate-in fade-in slide-in-from-right-4";
+            
+            const id = `mini-${Date.now()}`;
+            let pips = '';
+            for(let i=0; i<total; i++) pips += i < score ? `<div class="w-2 h-2 rounded-full bg-green-500 shadow-glow"></div>` : `<div class="w-2 h-2 rounded-full bg-slate-700"></div>`;
+
+            item.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <div id="${id}" class="w-10 h-10 rounded bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden"></div>
+                    <div class="text-xs font-bold text-slate-400">Match</div>
+                </div>
+                <div class="flex gap-1">${pips}</div>
+            `;
+            document.getElementById('history-list').prepend(item);
+            renderPreview(id, guess, 30);
+        }
+
+        // --- 5. ANALYSIS SCREEN ---
+        function showAnalysis() {
+            document.getElementById('analysis-modal').classList.remove('hidden');
+            const container = document.getElementById('analysis-content');
+            container.innerHTML = '';
+
+            let logicErrors = 0;
+
+            state.roundLog.forEach((log, idx) => {
+                if(!log.valid) logicErrors++;
+
+                const row = document.createElement('div');
+                row.className = `p-4 rounded-xl border flex items-center justify-between ${log.valid ? 'bg-slate-800/50 border-slate-700' : 'bg-red-900/20 border-red-500/50'}`;
+                
+                const id = `anl-${idx}`;
+                
+                let statusBadge = log.valid 
+                    ? `<span class="px-2 py-1 bg-green-500/10 text-green-400 text-[10px] font-bold uppercase rounded border border-green-500/20">Optimal</span>`
+                    : `<span class="px-2 py-1 bg-red-500/10 text-red-400 text-[10px] font-bold uppercase rounded border border-red-500/20">Logic Error</span>`;
+
+                if(log.score === engine.activeProps.length) statusBadge = `<span class="px-2 py-1 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase rounded border border-blue-500/20">Solved</span>`;
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <span class="text-slate-500 font-mono font-bold">#${idx+1}</span>
+                        <div id="${id}" class="w-12 h-12 rounded bg-slate-900 border border-slate-600 flex items-center justify-center overflow-hidden"></div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">${statusBadge}</div>
+                            <div class="text-xs text-slate-400">Eliminated <span class="text-white font-bold">${log.eliminated}</span> possibilities</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs text-slate-500 uppercase font-bold">Remaining</div>
+                        <div class="text-xl text-white font-mono">${log.remaining}</div>
+                    </div>
+                `;
+                container.appendChild(row);
+                // Delay render to ensure DOM exists
+                setTimeout(() => renderPreview(id, log.guess, 40), 0);
+            });
+
+            // Logic Score
+            const score = Math.round(((state.roundLog.length - logicErrors) / state.roundLog.length) * 100);
+            document.getElementById('logic-score').innerText = `${score}%`;
+            document.getElementById('logic-score').className = score === 100 ? "text-3xl font-black text-green-400" : (score > 70 ? "text-3xl font-black text-yellow-400" : "text-3xl font-black text-red-400");
+        }
+
+        function nextRound() {
+            document.getElementById('analysis-modal').classList.add('hidden');
+            if(state.round >= state.maxRounds) {
+                // Game Over
+                // Would add Cloud Save here same as previous games
+                location.reload(); 
+            } else {
+                state.round++;
+                startRound();
+            }
+        }
+
+        // --- UI BUILDER ---
+        function initBuilder() {
+            generateButtons('sel-shape', PROPS.shapes, 'shape', (val) => `<i class="bi ${PROP_ICONS[val]} text-xl"></i>`);
+            generateButtons('sel-color', PROPS.colors, 'color', (val) => `<div class="w-6 h-6 rounded-full ${PROP_ICONS[val]}"></div>`);
+            generateButtons('sel-pattern', PROPS.patterns, 'pattern', (val) => `<i class="bi ${PROP_ICONS[val]} text-xl"></i>`);
+            generateButtons('sel-border', PROPS.borders, 'border', (val) => `<i class="bi ${PROP_ICONS[val]} text-xl"></i>`);
+        }
+
+        function generateButtons(containerId, options, propKey, contentFn) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = `prop-btn w-full aspect-square rounded-xl flex items-center justify-center bg-slate-800 text-slate-400 ${state.current[propKey] === opt ? 'active text-pink-500' : ''}`;
+                btn.innerHTML = contentFn(opt);
+                btn.onclick = () => selectProp(propKey, opt, containerId);
+                container.appendChild(btn);
+            });
+        }
+
+        function selectProp(key, value, containerId) {
+            state.current[key] = value;
+            const btns = document.getElementById(containerId).children;
+            Array.from(btns).forEach((btn, idx) => {
+                if(PROPS[key + 's' === 'colors' ? 'colors' : key + 's'][idx] === value) btn.classList.add('active', 'text-pink-500');
+                else btn.classList.remove('active', 'text-pink-500');
+            });
+            renderPreview('user-preview', state.current);
+        }
+
+        // --- SVG RENDERER ---
+        function renderPreview(containerId, props, size=150) {
+            const container = document.getElementById(containerId);
+            if(!container) return;
+            const s = size / 100; 
+            const center = 50 * s;
+            const radius = 35 * s;
+
+            let shapeSvg = '';
+            const fill = props.pattern !== 'none' ? `url(#pat-${props.pattern})` : props.color;
+            const strokeColor = props.border === 'double' ? 'rgba(255,255,255,0.5)' : props.color;
+            const strokeWidth = props.border === 'thick' ? 6*s : (props.border === 'thin' ? 2*s : (props.border === 'double' ? 8*s : 0));
+
+            if (props.shape === 'circle') {
+                shapeSvg = `<circle cx="${center}" cy="${center}" r="${radius}" fill="${props.color}" />
+                            <circle cx="${center}" cy="${center}" r="${radius}" fill="${props.pattern !== 'none' ? `url(#pat-${props.pattern})` : 'none'}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />`;
+            } else if (props.shape === 'square') {
+                const dim = radius * 1.6; const offset = (size - dim) / 2;
+                shapeSvg = `<rect x="${offset}" y="${offset}" width="${dim}" height="${dim}" rx="${4*s}" fill="${props.color}" />
+                            <rect x="${offset}" y="${offset}" width="${dim}" height="${dim}" rx="${4*s}" fill="${props.pattern !== 'none' ? `url(#pat-${props.pattern})` : 'none'}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />`;
+            } else if (props.shape === 'triangle') {
+                const h = radius * 1.7; const w = radius * 1.9;
+                const p1 = `${center},${center - radius}`; const p2 = `${center - w/2},${center + radius/1.5}`; const p3 = `${center + w/2},${center + radius/1.5}`;
+                shapeSvg = `<polygon points="${p1} ${p2} ${p3}" fill="${props.color}" />
+                            <polygon points="${p1} ${p2} ${p3}" fill="${props.pattern !== 'none' ? `url(#pat-${props.pattern})` : 'none'}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" />`;
+            } else if (props.shape === 'diamond') {
+                const d = radius * 1.8;
+                const p1 = `${center},${center - d/2}`; const p2 = `${center + d/2},${center}`; const p3 = `${center},${center + d/2}`; const p4 = `${center - d/2},${center}`;
+                shapeSvg = `<polygon points="${p1} ${p2} ${p3} ${p4}" fill="${props.color}" />
+                            <polygon points="${p1} ${p2} ${p3} ${p4}" fill="${props.pattern !== 'none' ? `url(#pat-${props.pattern})` : 'none'}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linejoin="round" />`;
+            }
+
+            container.innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${size} ${size}">${shapeSvg}</svg>`;
+        }
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

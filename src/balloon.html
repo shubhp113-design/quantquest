@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Balloon Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Interactive Elements */
+        .action-btn { transition: all 0.2s; active:scale-95; }
+        
+        /* Balloon Animation */
+        #balloon-visual { transition: width 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px) rotate(-5deg); }
+            75% { transform: translateX(5px) rotate(5deg); }
+        }
+        .shake-anim { animation: shake 0.3s ease-in-out; }
+
+        @keyframes pop {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .pop-anim { animation: pop 0.2s ease-out forwards; }
+
+        /* Range Slider */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-blue-500/30 p-4 lg:p-10 flex flex-col">
+
+    <div id="app" class="max-w-7xl mx-auto w-full animate-in fade-in duration-500 flex-1 flex flex-col">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Session Equity</div>
+                    <div class="text-xl font-black text-white mono">$<span id="total-equity">0.00</span></div>
+                </div>
+                <button onclick="toggleSettings()" class="bg-slate-800 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border border-slate-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1">
+            
+            <div class="lg:col-span-4 space-y-6">
+                
+                <div id="settings-panel" class="glass-card p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-6 opacity-5">
+                        <svg class="w-32 h-32 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                    </div>
+                    
+                    <h2 class="text-xl font-extrabold text-white tracking-tight mb-6">CONFIGURATION</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                <span>Max Volatility (Pop Limit)</span>
+                                <span id="label-vol" class="text-blue-400">High (32)</span>
+                            </div>
+                            <input type="range" id="input-vol" min="16" max="64" step="8" value="32" oninput="updateSettingsUI()" class="w-full">
+                            <p class="text-[10px] text-slate-500 mt-1">Lower limit = Higher risk of popping early.</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[10px] font-bold uppercase text-slate-500 mb-2">
+                                <span>Value per Pump</span>
+                                <span id="label-val" class="text-green-400">$0.05</span>
+                            </div>
+                            <input type="range" id="input-val" min="0.01" max="0.25" step="0.01" value="0.05" oninput="updateSettingsUI()" class="w-full">
+                        </div>
+
+                        <div class="h-px bg-slate-800"></div>
+
+                        <button onclick="startNewSession()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-blue-900/20 transition-all active:scale-95">
+                            Apply & Reset Session
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-3xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest">Risk Appetite</h3>
+                        <span class="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400">Avg Pumps</span>
+                    </div>
+                    <div class="h-40 w-full">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col">
+                <div class="glass-card flex-1 rounded-[3rem] p-8 flex flex-col items-center justify-center relative border border-slate-700/50">
+                    
+                    <div class="absolute top-8 left-8">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Current Wager</div>
+                        <div class="text-3xl font-black text-white mono" id="current-wager">$0.00</div>
+                    </div>
+                    
+                    <div class="absolute top-8 right-8">
+                        <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Exposure</div>
+                        <div class="text-3xl font-black text-blue-500 mono text-right" id="current-pumps">0</div>
+                    </div>
+
+                    <div class="flex-1 flex items-center justify-center w-full relative">
+                        <div id="burst-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-200 z-20">
+                            <span class="text-6xl font-black text-red-500 tracking-tighter uppercase drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]">POPPED!</span>
+                        </div>
+
+                        <div id="balloon-visual" class="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-[0_0_50px_rgba(59,130,246,0.3)] relative z-10 flex items-center justify-center">
+                            <div class="w-3/4 h-3/4 rounded-full bg-gradient-to-br from-white/20 to-transparent absolute top-2 left-2"></div>
+                        </div>
+                        
+                        <div class="w-4 h-8 bg-slate-700 absolute bottom-[20%] z-0 rounded-b-lg"></div>
+                        <div class="w-1 h-32 bg-slate-800 absolute bottom-0 z-0"></div>
+                    </div>
+
+                    <div class="w-full max-w-md grid grid-cols-2 gap-6 mt-8">
+                        <button onclick="gamePump()" id="btn-pump" class="action-btn bg-blue-600 hover:bg-blue-500 text-white py-6 rounded-2xl font-black text-xl shadow-xl shadow-blue-900/30 flex flex-col items-center gap-1">
+                            <span>PUMP</span>
+                            <span class="text-[10px] font-normal opacity-70 uppercase tracking-wider">Increase Risk</span>
+                        </button>
+                        
+                        <button onclick="gameCollect()" id="btn-collect" class="action-btn bg-slate-700 hover:bg-green-600 text-white py-6 rounded-2xl font-black text-xl shadow-xl hover:shadow-green-900/30 transition-all flex flex-col items-center gap-1 group">
+                            <span>BANK</span>
+                            <span class="text-[10px] font-normal opacity-70 uppercase tracking-wider group-hover:text-green-100">Secure Profit</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="mt-6">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">Trade History</div>
+                    <div id="history-row" class="flex gap-3 overflow-x-auto pb-2 px-2 scrollbar-hide">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG & STATE ---
+        let config = { maxVol: 32, valuePerPump: 0.05 };
+        let session = { equity: 0, history: [] };
+        let round = { pumps: 0, value: 0, popLimit: 0, active: true };
+        let chart;
+
+        // --- INIT ---
+        window.onload = () => {
+            startNewSession();
+            updateSettingsUI();
+        };
+
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            // Simple logic: Scroll to top on mobile, or just highlight
+            panel.scrollIntoView({ behavior: 'smooth' });
+            panel.classList.add('ring-2', 'ring-blue-500');
+            setTimeout(() => panel.classList.remove('ring-2', 'ring-blue-500'), 500);
+        }
+
+        function updateSettingsUI() {
+            const vol = document.getElementById('input-vol').value;
+            const val = document.getElementById('input-val').value;
+            document.getElementById('label-vol').innerText = `Limit ~${vol}`;
+            document.getElementById('label-val').innerText = `$${parseFloat(val).toFixed(2)}`;
+        }
+
+        function startNewSession() {
+            // Apply Settings
+            config.maxVol = parseInt(document.getElementById('input-vol').value);
+            config.valuePerPump = parseFloat(document.getElementById('input-val').value);
+            
+            // Reset State
+            session = { equity: 0, history: [] };
+            updateEquityDisplay();
+            document.getElementById('history-row').innerHTML = '';
+            initChart();
+            
+            resetRound();
+        }
+
+        function resetRound() {
+            round.pumps = 0;
+            round.value = 0;
+            round.active = true;
+            // Pop Logic: Random number between 1 and maxVol. 
+            // Standard BART usually pops if random(1...Range) <= CurrentPumps?
+            // Let's do: Pre-determine a pop point between 1 and maxVol + variance
+            round.popLimit = Math.floor(Math.random() * config.maxVol) + 2; 
+            
+            // Reset UI
+            document.getElementById('current-pumps').innerText = "0";
+            document.getElementById('current-wager').innerText = "$0.00";
+            document.getElementById('current-wager').classList.remove('text-red-500');
+            document.getElementById('current-wager').classList.add('text-white');
+            
+            const balloon = document.getElementById('balloon-visual');
+            balloon.style.width = '128px'; // 32 * 4
+            balloon.style.height = '128px';
+            balloon.style.opacity = '1';
+            balloon.style.backgroundColor = ''; // Reset color
+            
+            document.getElementById('burst-overlay').style.opacity = '0';
+            
+            enableControls(true);
+        }
+
+        function enableControls(enabled) {
+            const btnPump = document.getElementById('btn-pump');
+            const btnCollect = document.getElementById('btn-collect');
+            if(enabled) {
+                btnPump.disabled = false; btnPump.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnCollect.disabled = false; btnCollect.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                btnPump.disabled = true; btnPump.classList.add('opacity-50', 'cursor-not-allowed');
+                btnCollect.disabled = true; btnCollect.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // --- GAME ACTIONS ---
+
+        function gamePump() {
+            if(!round.active) return;
+
+            // Check if Pop
+            if (round.pumps + 1 >= round.popLimit) {
+                explodeBalloon();
+            } else {
+                // Success Pump
+                round.pumps++;
+                round.value += config.valuePerPump;
+                
+                // Visuals
+                const newSize = 128 + (round.pumps * 10);
+                const balloon = document.getElementById('balloon-visual');
+                balloon.style.width = `${newSize}px`;
+                balloon.style.height = `${newSize}px`;
+                
+                // Color Shift (Blue -> Purple -> Red visually warning)
+                if(round.pumps > config.maxVol * 0.5) {
+                    balloon.style.backgroundColor = '#a855f7'; // Purple
+                }
+                if(round.pumps > config.maxVol * 0.75) {
+                    balloon.style.backgroundColor = '#ef4444'; // Red
+                }
+
+                // Shake effect
+                balloon.classList.add('shake-anim');
+                setTimeout(() => balloon.classList.remove('shake-anim'), 300);
+
+                // Update Text
+                document.getElementById('current-pumps').innerText = round.pumps;
+                document.getElementById('current-wager').innerText = `$${round.value.toFixed(2)}`;
+            }
+        }
+
+        function gameCollect() {
+            if(!round.active || round.pumps === 0) return;
+            
+            // Bank Money
+            session.equity += round.value;
+            updateEquityDisplay();
+            
+            // Log History (Green)
+            addHistoryItem(round.pumps, round.value, true);
+            updateChart(round.pumps);
+            
+            resetRound();
+        }
+
+        function explodeBalloon() {
+            round.active = false;
+            enableControls(false);
+
+            // Visuals
+            const balloon = document.getElementById('balloon-visual');
+            balloon.classList.add('pop-anim');
+            document.getElementById('burst-overlay').style.opacity = '1';
+            document.getElementById('current-wager').classList.remove('text-white');
+            document.getElementById('current-wager').classList.add('text-red-500');
+
+            // Log History (Red)
+            addHistoryItem(round.pumps, 0, false);
+            updateChart(round.pumps); // Track risk taken even if failed? Or track 0? Standard BART tracks pumps even on explosion usually.
+            
+            setTimeout(() => {
+                balloon.classList.remove('pop-anim');
+                resetRound();
+            }, 1500);
+        }
+
+        // --- UI HELPERS ---
+
+        function updateEquityDisplay() {
+            document.getElementById('total-equity').innerText = session.equity.toFixed(2);
+        }
+
+        function addHistoryItem(pumps, val, success) {
+            const container = document.getElementById('history-row');
+            const item = document.createElement('div');
+            item.className = `flex-shrink-0 w-16 h-16 rounded-xl flex flex-col items-center justify-center border ${success ? 'bg-green-900/20 border-green-500/30' : 'bg-red-900/20 border-red-500/30'}`;
+            item.innerHTML = `
+                <span class="text-xs font-bold ${success ? 'text-green-400' : 'text-red-400'}">${success ? '$'+val.toFixed(2) : 'POP'}</span>
+                <span class="text-[10px] text-slate-500">${pumps} P</span>
+            `;
+            container.prepend(item);
+        }
+
+        // --- CHART ---
+        function initChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            if(chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Pumps',
+                        data: [],
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: true, beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        function updateChart(pumps) {
+            if(!chart) return;
+            const label = `R${session.history.length + 1}`;
+            
+            // Keep last 20 rounds
+            if(chart.data.labels.length > 20) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+
+            chart.data.labels.push(label);
+            chart.data.datasets[0].data.push(pumps);
+            chart.update();
+        }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

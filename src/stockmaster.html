@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Stock Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; user-select: none; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Card Animation */
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .stock-dial { 
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: absolute; /* Essential for random placement */
+            width: 120px;
+            height: 120px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        .stock-dial:hover { transform: scale(1.05); z-index: 10; }
+        .stock-dial:active { transform: scale(0.95); }
+
+        /* Floating Score Animation */
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.5); opacity: 0; }
+        }
+        .float-score { position: absolute; pointer-events: none; animation: floatUp 0.8s ease-out forwards; z-index: 50; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+
+        /* Range Slider Styling */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #06b6d4; cursor: pointer; margin-top: -6px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="overflow-hidden">
+
+    <div id="auth-loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#020617] text-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-500 mb-4"></div>
+        <h2 class="text-xl font-bold tracking-widest uppercase">Connecting...</h2>
+    </div>
+
+    <div id="app" class="hidden h-screen flex flex-col max-w-7xl mx-auto p-4 lg:p-6">
+        
+        <div class="flex justify-between items-center mb-4 z-20 relative">
+            <div class="flex items-center gap-4">
+                <a href="zap-n-suite.html" class="w-10 h-10 flex items-center justify-center bg-slate-800 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700 text-slate-400 hover:text-white">
+                    <i class="bi bi-arrow-left text-lg"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-black text-white italic">STOCK<span class="text-cyan-500">MASTER</span></h1>
+                    <div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">High Frequency Trading</div>
+                </div>
+            </div>
+            <div class="flex gap-8 bg-slate-900/80 backdrop-blur border border-slate-800 px-6 py-2 rounded-2xl">
+                <div class="text-center">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lives</div>
+                    <div id="lives-display" class="text-xl text-red-500 font-black tracking-widest">❤️❤️❤️</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Time</div>
+                    <div id="time-display" class="text-xl text-white font-black mono">60s</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Profit</div>
+                    <div id="score-display" class="text-xl text-cyan-400 font-black mono">$0</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-container" class="flex-1 relative bg-slate-900/20 rounded-[2rem] border border-slate-800 overflow-hidden shadow-inner">
+            
+            <div id="start-screen" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#020617]/95 backdrop-blur-md rounded-[2rem]">
+                <div class="w-full max-w-md space-y-8 p-8">
+                    <div class="text-center">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-cyan-500/10 rounded-2xl text-cyan-400 border border-cyan-500/20 mb-4">
+                            <i class="bi bi-speedometer2 text-3xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-black text-white uppercase tracking-tight">Session Setup</h2>
+                        <p class="text-slate-500 text-sm mt-2">Configure your trading algorithm parameters.</p>
+                    </div>
+
+                    <div class="space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-white/5">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase text-slate-400 mb-2">
+                                <span>Session Duration</span>
+                                <span id="val-duration" class="text-cyan-400">60s</span>
+                            </div>
+                            <input type="range" id="opt-duration" min="30" max="300" step="30" value="60" class="w-full" oninput="updateSettingsUI()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase text-slate-400 mb-2">
+                                <span>Market Volatility (Speed)</span>
+                                <span id="val-speed" class="text-cyan-400">Normal</span>
+                            </div>
+                            <input type="range" id="opt-speed" min="1" max="3" step="1" value="2" class="w-full" oninput="updateSettingsUI()">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-bold uppercase text-slate-400 mb-2">
+                                <span>Max Risk (Lives)</span>
+                                <span id="val-lives" class="text-red-400">3</span>
+                            </div>
+                            <input type="range" id="opt-lives" min="1" max="10" step="1" value="3" class="w-full" oninput="updateSettingsUI()">
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-cyan-900/30 active:scale-[0.98]">
+                        Start Trading
+                    </button>
+                </div>
+            </div>
+
+            <div id="play-area" class="absolute inset-0 overflow-hidden"></div>
+
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-[#020617]/90 backdrop-blur-xl">
+        <div class="text-center bg-slate-900 border border-slate-700 p-10 rounded-[2.5rem] shadow-2xl max-w-sm w-full mx-4">
+            <h2 class="text-3xl font-black text-white mb-1">MARKET CLOSED</h2>
+            <p class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-8">Session Performance</p>
+            
+            <div class="mb-8">
+                <div class="text-5xl font-black text-cyan-400 mono mb-2 tracking-tight" id="final-score">$0</div>
+                <div class="text-xs text-slate-400 font-bold uppercase tracking-widest">Net Profit</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-8 text-center">
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-white/5">
+                    <div class="text-2xl font-bold text-white" id="final-trades">0</div>
+                    <div class="text-[10px] text-slate-500 font-bold uppercase">Trades</div>
+                </div>
+                <div class="bg-slate-800/50 p-3 rounded-xl border border-white/5">
+                    <div class="text-2xl font-bold text-white" id="final-misses">0</div>
+                    <div class="text-[10px] text-slate-500 font-bold uppercase">Crashes</div>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3">
+                <button onclick="location.reload()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold uppercase tracking-widest text-xs rounded-xl transition-colors shadow-lg shadow-cyan-900/20">
+                    Trade Again
+                </button>
+                <a href="zap-n-suite.html" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold uppercase tracking-widest text-xs rounded-xl transition-colors border border-slate-700">
+                    Zap-N Suite
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. AUTH & CONFIG ---
+        const SUPABASE_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        let supabaseClient;
+        let currentUser = null;
+
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            checkAuth();
+        } catch (err) {
+            console.error("Auth Error:", err);
+            document.getElementById('auth-loading').innerHTML = `<p class='text-red-500'>Connection Failed</p>`;
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = "../index.html";
+            } else {
+                currentUser = session.user;
+                document.getElementById('auth-loading').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+            }
+        }
+
+        // --- 2. SETTINGS UI ---
+        function updateSettingsUI() {
+            const dur = document.getElementById('opt-duration').value;
+            const spd = document.getElementById('opt-speed').value;
+            const liv = document.getElementById('opt-lives').value;
+
+            document.getElementById('val-duration').innerText = dur + 's';
+            document.getElementById('val-lives').innerText = liv;
+            
+            let speedLabel = "Normal";
+            if(spd == 1) speedLabel = "Slow";
+            if(spd == 3) speedLabel = "Fast";
+            document.getElementById('val-speed').innerText = speedLabel;
+        }
+
+        // --- 3. GAME LOGIC ---
+        const TICKERS = ["AAPL", "TSLA", "NVDA", "AMZN", "MSFT", "META", "AMD", "GME", "UBER", "SPY"];
+        
+        let config = {
+            duration: 60,
+            baseSpawnRate: 2000,
+            lives: 3
+        };
+
+        let state = {
+            isPlaying: false,
+            score: 0,
+            lives: 3,
+            trades: 0,
+            misses: 0,
+            timeLeft: 0,
+            lastSpawn: 0,
+            activeStocks: [] 
+        };
+
+        let gameLoopId;
+        let timerInterval;
+
+        function startGame() {
+            // Apply Settings
+            config.duration = parseInt(document.getElementById('opt-duration').value);
+            config.lives = parseInt(document.getElementById('opt-lives').value);
+            
+            const spdVal = parseInt(document.getElementById('opt-speed').value);
+            config.baseSpawnRate = spdVal === 1 ? 3000 : (spdVal === 3 ? 1200 : 2000);
+
+            // Reset State
+            state.isPlaying = true;
+            state.score = 0;
+            state.lives = config.lives;
+            state.trades = 0;
+            state.misses = 0;
+            state.timeLeft = config.duration;
+            state.activeStocks = [];
+            state.lastSpawn = 0;
+
+            // UI Reset
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('play-area').innerHTML = '';
+            updateHUD();
+
+            // Start Loops
+            timerInterval = setInterval(() => {
+                state.timeLeft--;
+                updateHUD();
+                if(state.timeLeft <= 0) endGame();
+            }, 1000);
+
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop(timestamp) {
+            if (!state.isPlaying) return;
+
+            // Spawn Logic
+            let currentSpawnRate = config.baseSpawnRate;
+            // Spawn faster as time runs out
+            if(state.timeLeft < 30) currentSpawnRate *= 0.7;
+            if(state.timeLeft < 10) currentSpawnRate *= 0.5;
+
+            if (timestamp - state.lastSpawn > currentSpawnRate) {
+                spawnDial();
+                state.lastSpawn = timestamp;
+            }
+
+            // Update Stocks
+            updateStocks();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function spawnDial() {
+            const id = Date.now() + Math.random();
+            const ticker = TICKERS[Math.floor(Math.random() * TICKERS.length)];
+            
+            // Random Position Logic
+            const container = document.getElementById('play-area');
+            const maxX = container.clientWidth - 140; // 120px dial + padding
+            const maxY = container.clientHeight - 140;
+            const x = Math.max(20, Math.random() * maxX);
+            const y = Math.max(20, Math.random() * maxY);
+
+            // Speed
+            const speed = 0.3 + (Math.random() * 0.5); // % per frame
+
+            const el = document.createElement('div');
+            el.className = "stock-dial flex flex-col items-center justify-center bg-slate-900/90 rounded-full border-4 border-slate-700 shadow-2xl backdrop-blur-md select-none";
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            
+            // SVG for Circular Progress
+            // Radius 50, Circumference ~314
+            el.innerHTML = `
+                <div class="relative w-full h-full">
+                    <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#1e293b" stroke-width="8" />
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="#22c55e" stroke-width="8" 
+                                stroke-dasharray="339" stroke-dashoffset="180" style="opacity: 0.2" />
+                        <circle class="progress-ring" cx="60" cy="60" r="54" fill="none" stroke="#3b82f6" stroke-width="8"
+                                stroke-dasharray="339" stroke-dashoffset="339" stroke-linecap="round" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="text-xs font-black text-white tracking-widest">${ticker}</span>
+                        <span class="text-[10px] font-bold text-slate-500 status-text">HOLD</span>
+                    </div>
+                </div>
+            `;
+
+            el.onmousedown = (e) => { e.stopPropagation(); handleInteract(id); };
+            
+            document.getElementById('play-area').appendChild(el);
+
+            state.activeStocks.push({
+                id, el,
+                progress: 0,
+                speed,
+                ring: el.querySelector('.progress-ring'),
+                statusText: el.querySelector('.status-text'),
+                status: 'hold' // hold, profit, danger
+            });
+        }
+
+        function updateStocks() {
+            const circumference = 339; // 2 * pi * 54
+
+            for (let i = state.activeStocks.length - 1; i >= 0; i--) {
+                const s = state.activeStocks[i];
+                s.progress += s.speed;
+
+                // Crash?
+                if (s.progress >= 100) {
+                    handleCrash(s, i);
+                    continue;
+                }
+
+                // Update Visuals
+                const offset = circumference - (s.progress / 100) * circumference;
+                s.ring.style.strokeDashoffset = offset;
+
+                // State Check
+                if (s.progress > 85) {
+                    if (s.status !== 'danger') {
+                        s.status = 'danger';
+                        s.ring.setAttribute('stroke', '#ef4444'); // Red
+                        s.statusText.innerText = "RISK!";
+                        s.statusText.classList.add('text-red-500', 'animate-pulse');
+                        s.el.classList.replace('border-slate-700', 'border-red-500');
+                    }
+                } else if (s.progress > 40) {
+                    if (s.status !== 'profit') {
+                        s.status = 'profit';
+                        s.ring.setAttribute('stroke', '#22c55e'); // Green
+                        s.statusText.innerText = "SELL";
+                        s.statusText.className = "text-[10px] font-bold text-green-400 status-text";
+                        s.el.classList.replace('border-slate-700', 'border-green-500');
+                    }
+                }
+            }
+        }
+
+        function handleInteract(id) {
+            const index = state.activeStocks.findIndex(s => s.id === id);
+            if (index === -1) return;
+            const s = state.activeStocks[index];
+            const rect = s.el.getBoundingClientRect();
+
+            if (s.status === 'hold') {
+                // Penalty
+                state.score -= 50;
+                showFloatText(rect.left, rect.top, "-$50", "text-red-500");
+                // Visual feedback only, don't remove
+                s.el.classList.add('scale-95', 'opacity-80'); 
+                setTimeout(() => s.el.classList.remove('scale-95', 'opacity-80'), 100);
+            } else {
+                // Success
+                let val = Math.floor(s.progress * 2);
+                if (s.status === 'danger') val = Math.floor(val * 1.5); // Risk bonus
+                
+                state.score += val;
+                state.trades++;
+                showFloatText(rect.left, rect.top, `+$${val}`, "text-green-400");
+                
+                s.el.remove();
+                state.activeStocks.splice(index, 1);
+            }
+            updateHUD();
+        }
+
+        function handleCrash(s, index) {
+            state.lives--;
+            state.misses++;
+            updateHUD();
+
+            s.el.innerHTML = `<div class="w-full h-full flex items-center justify-center bg-red-600 rounded-full"><span class="font-black text-white">CRASH</span></div>`;
+            
+            // Cleanup logic
+            state.activeStocks.splice(index, 1);
+            setTimeout(() => s.el.remove(), 500);
+
+            if (state.lives <= 0) endGame();
+        }
+
+        function showFloatText(x, y, text, colorClass) {
+            const el = document.createElement('div');
+            el.className = `float-score ${colorClass} text-2xl`;
+            el.innerText = text;
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        function updateHUD() {
+            document.getElementById('score-display').innerText = `$${state.score}`;
+            document.getElementById('time-display').innerText = `${state.timeLeft}s`;
+            let hearts = "";
+            for(let i=0; i<state.lives; i++) hearts += "❤️";
+            document.getElementById('lives-display').innerText = hearts || "💀";
+        }
+
+        async function endGame() {
+            state.isPlaying = false;
+            clearInterval(timerInterval);
+            cancelAnimationFrame(gameLoopId);
+
+            // Save to Cloud
+            await saveScore(state.score, config.duration);
+
+            document.getElementById('final-score').innerText = `$${state.score}`;
+            document.getElementById('final-trades').innerText = state.trades;
+            document.getElementById('final-misses').innerText = state.misses;
+            document.getElementById('game-over-modal').classList.remove('hidden');
+        }
+
+        async function saveScore(score, duration) {
+            if (!currentUser) return;
+            const { error } = await supabaseClient.from('game_scores').insert({
+                user_id: currentUser.id,
+                game_type: 'stock-master',
+                score: score,
+                speed: duration, // We use 'speed' column for duration here
+                played_at: new Date().toISOString()
+            });
+            if (error) console.error("Save failed:", error);
+        }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>

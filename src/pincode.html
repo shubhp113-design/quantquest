@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check (The "Hard Check")
+        async function checkAuth() {
+            try {
+                // getUser() contacts the server to verify the user still exists
+                const { data: { user }, error } = await supabaseGatekeeper.auth.getUser();
+                
+                if (error || !user) {
+                    // User is deleted or token is invalid -> FORCE LOGOUT
+                    console.warn("User validation failed. Redirecting...");
+                    await supabaseGatekeeper.auth.signOut(); // Clear local session
+                    localStorage.clear(); // Nuke any leftovers
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in & Valid -> Reveal Page
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth system error:", error);
+                window.location.replace("../index.html");
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Hide body by default to prevent content flashing */
+        body { opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+    </style>
+    <script>
+        // 1. Config
+        const GATEKEEPER_URL = 'https://mpxayhidmnzykuibpfin.supabase.co';
+        const GATEKEEPER_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGF5aGlkbW56eWt1aWJwZmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5MTg4NDIsImV4cCI6MjA4MjQ5NDg0Mn0.LbOySRbVBvH5UpHWMbO938p5tVUdGtAYnSMsW3Vi2e8';
+        
+        // Use a unique variable name to avoid conflicts
+        const supabaseGatekeeper = window.supabase.createClient(GATEKEEPER_URL, GATEKEEPER_KEY);
+
+        // 2. Auth Check
+        async function checkAuth() {
+            try {
+                const { data: { session } } = await supabaseGatekeeper.auth.getSession();
+                
+                if (!session) {
+                    // Not logged in? Redirect to Main Hub
+                    // Adjust this path if your files are in sub-sub-folders
+                    window.location.replace("../index.html"); 
+                } else {
+                    // Logged in? Wait for body to exist, then reveal
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', showPage);
+                    } else {
+                        showPage();
+                    }
+                }
+            } catch (error) {
+                console.error("Auth check failed:", error);
+                window.location.replace("../index.html"); // Fail safe
+            }
+        }
+
+        function showPage() {
+            document.body.style.opacity = "1";
+            document.body.style.pointerEvents = "auto";
+        }
+
+        checkAuth();
+    </script>
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantForge | Pincode Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Effect */
+        .glass-card { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        
+        /* Card Interactions */
+        .mode-card { transition: all 0.3s ease; border: 1px solid rgba(255,255,255,0.05); }
+        .mode-card:hover { transform: translateY(-3px); }
+
+        /* Theme Classes */
+        .blue-theme:hover { border-color: rgba(59, 130, 246, 0.5); box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.2); }
+        .red-theme:hover { border-color: rgba(239, 68, 68, 0.5); box-shadow: 0 10px 30px -10px rgba(239, 68, 68, 0.2); }
+        .orange-theme:hover { border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.2); }
+        
+        /* Keypad */
+        .keypad-btn {
+            background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700;
+            border-radius: 1rem; padding: 1.5rem; transition: all 0.1s; user-select: none;
+        }
+        .keypad-btn:active { transform: scale(0.95); background: #ef4444; border-color: #ef4444; }
+        .keypad-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.5); }
+
+        /* Animations */
+        @keyframes flash { 0% { opacity: 0; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } 100% { opacity: 0; transform: scale(0.9); } }
+        .num-flash { animation: flash 0.8s ease-in-out forwards; }
+    </style>
+
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="../icon-192.png">
+    
+</head>
+<body class="min-h-screen selection:bg-red-500/30 p-4 lg:p-10">
+
+    <div id="app" class="max-w-7xl mx-auto animate-in fade-in duration-500">
+        
+        <div class="mb-8 flex items-center justify-between border-b border-white/10 pb-6">
+            <a href="zap-n-suite.html" class="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-colors uppercase tracking-widest bg-slate-900/50 px-4 py-2 rounded-full border border-slate-800 hover:border-slate-600">
+                <span>←</span> Zap-N Suite
+            </a>
+            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Module: Pincode Lab</div>
+        </div>
+
+        <div id="dashboard-view" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <div class="lg:col-span-5 space-y-6">
+                <div class="glass-card p-8 rounded-[2.5rem] shadow-2xl">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-900/40">
+                            <span class="text-2xl text-white">🔒</span>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-extrabold text-white tracking-tight">PINCODE</h1>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">Numerical Recall</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <button onclick="startGame('repeat')" class="w-full text-left p-5 rounded-2xl bg-slate-900/40 glass-card mode-card blue-theme group relative overflow-hidden">
+                            <div class="flex justify-between items-center mb-1 relative z-10">
+                                <span class="text-sm font-black text-white uppercase tracking-widest group-hover:text-blue-400 transition-colors">Direct Entry</span>
+                                <span class="text-[10px] bg-slate-800/80 text-blue-300 font-bold px-2 py-1 rounded">Practice</span>
+                            </div>
+                            <p class="text-xs text-slate-500 relative z-10">Memorize and input the code in exact order.</p>
+                        </button>
+
+                        <button onclick="startGame('reverse')" class="w-full text-left p-5 rounded-2xl bg-slate-900/40 glass-card mode-card red-theme group relative overflow-hidden">
+                            <div class="flex justify-between items-center mb-1 relative z-10">
+                                <span class="text-sm font-black text-white uppercase tracking-widest group-hover:text-red-400 transition-colors">Reverse Entry</span>
+                                <span class="text-[10px] bg-slate-800/80 text-red-300 font-bold px-2 py-1 rounded">Practice</span>
+                            </div>
+                            <p class="text-xs text-slate-500 relative z-10">Input the security code backwards (123 -> 321).</p>
+                        </button>
+
+                        <button onclick="startGame('sort')" class="w-full text-left p-5 rounded-2xl bg-slate-900/40 glass-card mode-card orange-theme group relative overflow-hidden">
+                            <div class="flex justify-between items-center mb-1 relative z-10">
+                                <span class="text-sm font-black text-white uppercase tracking-widest group-hover:text-orange-400 transition-colors">Sorted Entry</span>
+                                <span class="text-[10px] bg-slate-800/80 text-orange-300 font-bold px-2 py-1 rounded">Practice</span>
+                            </div>
+                            <p class="text-xs text-slate-500 relative z-10">Reorder digits lowest to highest (315 -> 135).</p>
+                        </button>
+
+                        <div class="h-px bg-slate-800 my-6"></div>
+
+                        <button onclick="startGame('combined')" class="w-full text-left p-5 rounded-2xl bg-red-900/10 glass-card mode-card red-theme group relative overflow-hidden border border-red-500/20">
+                            <div class="flex justify-between items-center mb-1 relative z-10">
+                                <span class="text-sm font-black text-white uppercase tracking-widest group-hover:text-red-400 transition-colors">Realistic Mode</span>
+                                <span class="text-[10px] bg-red-600 text-white font-bold px-2 py-1 rounded shadow-lg shadow-red-900/50">Exam Mode</span>
+                            </div>
+                            <p class="text-xs text-red-200/60 leading-relaxed mt-2 relative z-10">3 Rounds (Direct -> Reverse -> Sort). 1 min each. Difficulty adaptive.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-card p-6 rounded-3xl border-t-4 border-red-500">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">High Score</span>
+                        <div id="high-score" class="text-4xl font-black text-white italic">0</div>
+                    </div>
+                    <div class="glass-card p-6 rounded-3xl border-t-4 border-slate-700">
+                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Total Sessions</span>
+                        <div id="total-sessions" class="text-4xl font-black text-white italic">0</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-8 rounded-[2.5rem] flex flex-col h-64">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-sm font-black text-slate-400 uppercase tracking-widest">Retention Trend</h2>
+                    </div>
+                    <div class="relative flex-1 w-full">
+                        <canvas id="perfChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-end px-4">
+                        <h3 class="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Recent Audit Logs</h3>
+                        <button onclick="clearData()" class="text-[10px] text-red-500 font-bold uppercase hover:underline">Reset Data</button>
+                    </div>
+                    <div id="session-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto scrollbar-hide pr-1">
+                        </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-view" class="hidden fixed inset-0 bg-[#020617] z-50 flex flex-col items-center justify-center p-4">
+            <div class="w-full max-w-lg">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <div id="mode-label" class="text-xs font-black text-red-500 uppercase tracking-widest mb-1">REPEAT</div>
+                        <div class="text-xs font-bold text-slate-500 uppercase">Length: <span id="seq-len" class="text-white">5</span></div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xs font-bold text-slate-500 uppercase">Score</div>
+                        <div id="game-score" class="text-4xl font-black text-white">0</div>
+                    </div>
+                </div>
+
+                <div id="timer-container" class="hidden w-full bg-slate-800 h-1 rounded-full mb-8 overflow-hidden">
+                    <div id="timer-bar" class="h-full bg-red-500 transition-all duration-1000 ease-linear" style="width: 100%"></div>
+                </div>
+
+                <div class="glass-card h-48 rounded-[2rem] flex items-center justify-center mb-8 relative overflow-hidden border-2 border-slate-800">
+                    <div id="display-area" class="text-9xl font-black text-white mono"></div>
+                    <div id="input-feedback" class="absolute inset-0 flex items-center justify-center text-4xl font-bold tracking-[0.5em] text-red-400 opacity-50 mono"></div>
+                </div>
+
+                <div id="keypad" class="grid grid-cols-3 gap-3 mb-8 opacity-50 pointer-events-none transition-opacity">
+                    <button onclick="inputDigit(1)" class="keypad-btn">1</button>
+                    <button onclick="inputDigit(2)" class="keypad-btn">2</button>
+                    <button onclick="inputDigit(3)" class="keypad-btn">3</button>
+                    <button onclick="inputDigit(4)" class="keypad-btn">4</button>
+                    <button onclick="inputDigit(5)" class="keypad-btn">5</button>
+                    <button onclick="inputDigit(6)" class="keypad-btn">6</button>
+                    <button onclick="inputDigit(7)" class="keypad-btn">7</button>
+                    <button onclick="inputDigit(8)" class="keypad-btn">8</button>
+                    <button onclick="inputDigit(9)" class="keypad-btn">9</button>
+                    <button onclick="backspace()" class="keypad-btn text-red-400 hover:bg-red-900/30 hover:border-red-500/50">⌫</button>
+                    <button onclick="inputDigit(0)" class="keypad-btn">0</button>
+                    <button onclick="submitAnswer()" class="keypad-btn text-green-400 hover:bg-green-900/30 hover:border-green-500/50">↵</button>
+                </div>
+
+                <div class="text-center">
+                    <button onclick="exitGame()" class="text-slate-500 hover:text-white font-bold text-xs uppercase tracking-widest px-6 py-3 rounded-full hover:bg-slate-800 transition-colors">End Session</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="interstitial-view" class="hidden fixed inset-0 bg-black/90 z-[60] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
+            <h2 class="text-sm font-bold text-red-500 uppercase tracking-widest mb-4">Next Protocol</h2>
+            <h1 id="next-round-title" class="text-6xl font-black text-white mb-6 tracking-tight">REVERSE ORDER</h1>
+            <p id="next-round-desc" class="text-slate-400 max-w-md mb-12 text-lg">Input the sequence backwards. Example: 12345 → 54321</p>
+            <button onclick="startNextRound()" class="bg-red-600 hover:bg-red-500 text-white px-12 py-5 rounded-2xl font-bold uppercase tracking-widest text-sm shadow-2xl shadow-red-900/50 transition-all transform hover:scale-105">Initiate</button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- STATE ---
+        let logs = JSON.parse(localStorage.getItem('mem_logs') || '[]');
+        let chart;
+        
+        let gameState = {
+            mode: 'repeat', 
+            round: 1, 
+            score: 0,
+            length: 5, 
+            currentSeq: [],
+            inputSeq: [],
+            isDisplaying: false,
+            timeLeft: 60,
+            timerInt: null
+        };
+
+        const ROUND_CONFIG = {
+            1: { mode: 'repeat', label: 'DIRECT ENTRY', desc: 'Type exactly what you see.' },
+            2: { mode: 'reverse', label: 'REVERSE ENTRY', desc: 'Type the code backwards.' },
+            3: { mode: 'sort', label: 'SORTED ENTRY', desc: 'Type digits lowest to highest.' }
+        };
+
+        // --- INIT ---
+        window.onload = () => {
+            renderDashboard();
+        };
+
+        // --- GAME LOGIC ---
+        function startGame(mode) {
+            gameState.mode = mode;
+            gameState.score = 0;
+            gameState.length = 5; 
+            gameState.round = 1;
+            
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('game-view').classList.remove('hidden');
+            
+            if(mode === 'combined') {
+                gameState.mode = 'repeat';
+                document.getElementById('timer-container').classList.remove('hidden');
+                startRound(1);
+            } else {
+                document.getElementById('mode-label').innerText = mode.toUpperCase() + ' ENTRY';
+                document.getElementById('timer-container').classList.add('hidden');
+                nextSequence();
+            }
+        }
+
+        function startRound(roundNum) {
+            gameState.round = roundNum;
+            gameState.mode = ROUND_CONFIG[roundNum].mode;
+            gameState.length = 5; 
+            
+            document.getElementById('mode-label').innerText = ROUND_CONFIG[roundNum].label;
+            
+            // Timer Logic
+            gameState.timeLeft = 60;
+            updateTimerUI();
+            if(gameState.timerInt) clearInterval(gameState.timerInt);
+            gameState.timerInt = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimerUI();
+                if(gameState.timeLeft <= 0) endRound();
+            }, 1000);
+
+            nextSequence();
+        }
+
+        function updateTimerUI() {
+            document.getElementById('timer-bar').style.width = ((gameState.timeLeft / 60) * 100) + '%';
+        }
+
+        async function nextSequence() {
+            gameState.inputSeq = [];
+            document.getElementById('input-feedback').innerText = '';
+            document.getElementById('seq-len').innerText = gameState.length;
+            document.getElementById('game-score').innerText = gameState.score;
+            
+            // Generate
+            gameState.currentSeq = [];
+            for(let i=0; i<gameState.length; i++) {
+                gameState.currentSeq.push(Math.floor(Math.random() * 10));
+            }
+
+            // Display
+            gameState.isDisplaying = true;
+            disableKeypad();
+            const display = document.getElementById('display-area');
+            
+            await new Promise(r => setTimeout(r, 500)); 
+
+            for (let num of gameState.currentSeq) {
+                display.innerText = num;
+                display.classList.remove('num-flash');
+                void display.offsetWidth; // Trigger reflow
+                display.classList.add('num-flash');
+                await new Promise(r => setTimeout(r, 800)); // Show time
+                display.innerText = '';
+                await new Promise(r => setTimeout(r, 200)); // Gap time
+            }
+
+            gameState.isDisplaying = false;
+            enableKeypad();
+        }
+
+        // --- INPUT HANDLING ---
+        function enableKeypad() {
+            document.getElementById('keypad').classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('input-feedback').innerText = '_ '.repeat(gameState.length);
+        }
+
+        function disableKeypad() {
+            document.getElementById('keypad').classList.add('opacity-50', 'pointer-events-none');
+        }
+
+        function inputDigit(n) {
+            if(gameState.inputSeq.length < gameState.length) {
+                gameState.inputSeq.push(n);
+                updateInputDisplay();
+            }
+        }
+
+        function backspace() {
+            gameState.inputSeq.pop();
+            updateInputDisplay();
+        }
+
+        function updateInputDisplay() {
+            let txt = gameState.inputSeq.join(' ');
+            let placeholders = '_ '.repeat(gameState.length - gameState.inputSeq.length);
+            document.getElementById('input-feedback').innerText = txt + ' ' + placeholders;
+        }
+
+        function submitAnswer() {
+            if(gameState.inputSeq.length !== gameState.length) return;
+
+            disableKeypad();
+            
+            // Validate based on mode
+            let targetStr = "";
+            let inputStr = gameState.inputSeq.join('');
+
+            if(gameState.mode === 'repeat') {
+                targetStr = gameState.currentSeq.join('');
+            } else if (gameState.mode === 'reverse') {
+                targetStr = [...gameState.currentSeq].reverse().join('');
+            } else if (gameState.mode === 'sort') {
+                targetStr = [...gameState.currentSeq].sort((a,b) => a-b).join('');
+            }
+
+            const isCorrect = inputStr === targetStr;
+
+            if(isCorrect) {
+                gameState.score++;
+                document.getElementById('input-feedback').innerHTML = '<span class="text-green-500">✓</span>';
+                if(gameState.length < 8) gameState.length++;
+            } else {
+                gameState.score--;
+                document.getElementById('input-feedback').innerHTML = `<span class="text-red-500 text-lg">${targetStr}</span>`;
+                if(gameState.length > 4) gameState.length--;
+            }
+
+            setTimeout(() => nextSequence(), 1000);
+        }
+
+        // --- FLOW CONTROL ---
+        function endRound() {
+            clearInterval(gameState.timerInt);
+            
+            if(gameState.round < 3) {
+                const nextRound = gameState.round + 1;
+                document.getElementById('next-round-title').innerText = ROUND_CONFIG[nextRound].label;
+                document.getElementById('next-round-desc').innerText = ROUND_CONFIG[nextRound].desc;
+                document.getElementById('interstitial-view').classList.remove('hidden');
+            } else {
+                saveSession(true);
+            }
+        }
+
+        function startNextRound() {
+            document.getElementById('interstitial-view').classList.add('hidden');
+            startRound(gameState.round + 1);
+        }
+
+        function exitGame() {
+            if(gameState.timerInt) clearInterval(gameState.timerInt);
+            if(document.getElementById('timer-container').classList.contains('hidden') === false) {
+                // Combined mode exit
+            } else {
+                saveSession(false);
+            }
+            location.reload();
+        }
+
+        function saveSession(isCombined) {
+            const entry = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString(),
+                mode: isCombined ? 'Realistic Mode' : gameState.mode.charAt(0).toUpperCase() + gameState.mode.slice(1) + ' Entry',
+                score: gameState.score,
+                isExam: isCombined
+            };
+            logs.push(entry);
+            localStorage.setItem('mem_logs', JSON.stringify(logs));
+            location.reload();
+        }
+
+        // --- DASHBOARD RENDER ---
+        function renderDashboard() {
+            if(logs.length === 0) return;
+
+            const maxScore = Math.max(...logs.map(l => l.score));
+            document.getElementById('high-score').innerText = maxScore;
+            document.getElementById('total-sessions').innerText = logs.length;
+
+            const list = document.getElementById('session-list');
+            list.innerHTML = [...logs].reverse().map(l => `
+                <div class="glass-card p-3 rounded-xl flex justify-between items-center group hover:bg-slate-800/50 transition-colors">
+                    <div>
+                        <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">${l.date}</span>
+                        <span class="text-sm font-bold text-white group-hover:text-red-400 transition-colors ${l.isExam ? 'text-red-400' : ''}">${l.mode}</span>
+                    </div>
+                    <div class="text-xl font-black text-white mono">${l.score}</div>
+                </div>
+            `).join('');
+
+            const ctx = document.getElementById('perfChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: logs.map((_,i) => i+1),
+                    datasets: [{ 
+                        label: 'Score', 
+                        data: logs.map(l => l.score), 
+                        borderColor: '#ef4444', 
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        fill: true,
+                        tension: 0.4, 
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { display: false }, 
+                        y: { display: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#ef4444' } } 
+                    }
+                }
+            });
+        }
+
+        function clearData() { if(confirm('Reset Pincode Logs?')) { localStorage.removeItem('mem_logs'); location.reload(); } }
+
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(reg => console.log('SW registered!', reg.scope))
+                    .catch(err => console.log('SW failed:', err));
+            });
+        }
+    </script>
+    
+</body>
+</html>
